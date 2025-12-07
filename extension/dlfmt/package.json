@@ -1,0 +1,100 @@
+{
+	"name": "dlfmt",
+    "publisher": "CrazySpottedDove",
+	"displayName": "dlfmt",
+	"description": "a blazing fast lua formatter, only support windows & linux",
+	"version": "0.0.1",
+	"engines": {
+		"vscode": "^1.106.0"
+	},
+	"categories": [
+		"Other"
+	],
+	"main": "./extension.js",
+	"contributes": {
+		"commands": [
+			{
+				"command": "dlfmt.formatFile",
+				"title": "dlfmt: 格式化文件"
+			},
+			{
+				"command": "dlfmt.formatDirectory",
+				"title": "dlfmt: 格式化文件夹"
+			}
+		],
+		"menus": {
+			"commandPalette": [
+				{
+					"command": "dlfmt.formatFile",
+					"when": "true"
+				},
+				{
+					"command": "dlfmt.formatDirectory",
+					"when": "true"
+				}
+			],
+			"explorer/context": [
+				{
+					"command": "dlfmt.formatFile",
+					"group": "navigation",
+					"when": "resourceScheme == file && explorerResourceIsFolder == false"
+				},
+				{
+					"command": "dlfmt.formatDirectory",
+					"group": "navigation",
+					"when": "resourceScheme == file && explorerResourceIsFolder == true"
+				}
+			]
+		},
+		"configuration": {
+			"title": "dlfmt",
+			"properties": {
+				"dlfmt.path": {
+					"type": "string",
+					"default": "",
+					"description": "覆盖内置 dlfmt 可执行文件的绝对路径（留空使用内置二进制）"
+				}
+			}
+		},
+		"languages": [
+			{
+				"id": "lua",
+				"aliases": [
+					"Lua"
+				],
+				"extensions": [
+					".lua"
+				],
+				"configuration": "./language-configuration.json"
+			}
+		],
+		"formatters": [
+			{
+				"language": "lua",
+				"command": "dlfmt.formatDocument",
+				"displayName": "dlfmt"
+			}
+		]
+	},
+	"files": [
+		"extension.js",
+		"bin/**"
+	],
+	"scripts": {
+		"lint": "eslint .",
+		"pretest": "npm run lint",
+		"test": "vscode-test"
+	},
+	"activationEvents": [
+		"onCommand:dlfmt.formatFile",
+		"onCommand:dlfmt.formatDirectory"
+	],
+	"devDependencies": {
+		"@types/vscode": "^1.106.0",
+		"@types/mocha": "^10.0.9",
+		"@types/node": "20.x",
+		"eslint": "^9.13.0",
+		"@vscode/test-cli": "^0.0.10",
+		"@vscode/test-electron": "^2.4.1"
+	}
+}

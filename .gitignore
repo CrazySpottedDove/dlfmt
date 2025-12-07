@@ -8,3 +8,5 @@ output/
 build-release/
 build-debug/
 build-win/
+bin/
+node_modules/
