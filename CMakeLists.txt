@@ -13,7 +13,7 @@ add_library(dl_core STATIC
     src/ast_tools.cpp
     src/parser.cpp
 )
-
+set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -static -static-libgcc -static-libstdc++")
 target_include_directories(dl_core PUBLIC ${CMAKE_SOURCE_DIR}/include)
 target_link_libraries(dl_core PUBLIC spdlog::spdlog magic_enum::magic_enum OpenMP::OpenMP_CXX)
 

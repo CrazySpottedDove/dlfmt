@@ -5,3 +5,6 @@ logs/
 .gdb_history
 output/
 .vscode/
+build-release/
+build-debug/
+build-win/

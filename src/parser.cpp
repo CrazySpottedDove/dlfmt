@@ -3,6 +3,7 @@
 #include <cstddef>
 #include <cstdio>
 #include <fmt/format.h>
+#include <iostream>
 #include <magic_enum/magic_enum.hpp>
 #include <memory>
 #include <spdlog/spdlog.h>
@@ -18,6 +19,9 @@ Token* Parser::get() noexcept
     if (position_ < tokens_.size() - 1) {
         ++position_;
     }
+    else {
+        reached_eof_ = true;
+    }
     return token;
 }
 
@@ -29,12 +33,12 @@ Token* Parser::peek(size_t offset) const noexcept
 
 std::string Parser::get_token_start_position(const Token* token) const noexcept
 {
-    return fmt::format("{}:{}:", file_name_,token->line_);
+    return fmt::format("{}:{}:", file_name_, token->line_);
 }
 
 bool Parser::is_block_follow() const noexcept
 {
-    if (position_ >= tokens_.size()) {
+    if (reached_eof_) {
         return true;
     }
     const Token* token = &tokens_.at(position_);
@@ -283,15 +287,16 @@ std::unique_ptr<AstNode> Parser::primaryexpr()
             base             = std::make_unique<MethodExpr>(
                 std::move(base), method, std::move(func_args), colon_token);
         }
+        else if (token->source_ == "{" || token->source_ == "(" ||
+                 token->type_ == TokenType::String) {
+            base = std::make_unique<CallExpr>(std::move(base), functionargs());
+        }
         else if (token->source_ == "[") {
             auto open_bracket  = get();
             auto index_expr    = expr();
             auto close_bracket = expect(TokenType::Symbol, "]");
             base               = std::make_unique<IndexExpr>(
                 std::move(base), std::move(index_expr), open_bracket, close_bracket);
-        }
-        else if (token->source_ == "{" || token->source_ == "(") {
-            base = std::make_unique<CallExpr>(std::move(base), functionargs());
         }
         else {
             break;
@@ -683,6 +688,7 @@ Parser::Parser(std::vector<Token>& tokens, const std::string& file_name)
     : file_name_(file_name)
     , position_(0)
     , tokens_(tokens)
+    , reached_eof_(false)
 
 {
     ast_root_ = block();

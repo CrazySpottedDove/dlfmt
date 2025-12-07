@@ -183,17 +183,21 @@ void Tokenizer::tokenize_compile()
                     error("String not closed");
                 }
                 const char c2 = get();
-                if (c2 == '\\') {
-                    if (finished()) {
+                if(c2 == '\n'){
+                    error("String killed by '\\n'");
+                }
+                if(c2 == '\\'){
+                    if(finished()){
                         error("String not closed");
                     }
-                    const char c3          = get();
-                    const auto escape_iter = character_for_escape.find(c3);
-                    if (escape_iter == character_for_escape.end()) {
-                        error("Invalid escape sequence: \\%c", c3);
+                    // 通过转义忽略下一个字符的特殊含义
+                    const char c3 = get();
+                    if(c3 == '\n'){
+                        ++line_;
                     }
+                    continue;
                 }
-                else if (c2 == c1) {
+                if (c2 == c1) {
                     break;
                 }
             }
@@ -216,7 +220,7 @@ void Tokenizer::tokenize_compile()
             continue;
         }
 
-        if(c1 == '.' && peek() == '.' && peek(1) == '.'){
+        if (c1 == '.' && peek() == '.' && peek(1) == '.') {
             position_ += 2;
             // 表示变参符号 "..."，作为特殊标识符处理
             addToken(TokenType::Identifier, token_start);
@@ -413,17 +417,21 @@ void Tokenizer::tokenize_format()
                     error("String not closed");
                 }
                 const char c2 = get();
+                if (c2 == '\n') {
+                    error("String killed by '\\n'");
+                }
                 if (c2 == '\\') {
                     if (finished()) {
                         error("String not closed");
                     }
-                    const char c3          = get();
-                    const auto escape_iter = character_for_escape.find(c3);
-                    if (escape_iter == character_for_escape.end()) {
-                        error("Invalid escape sequence: \\%c", c3);
+                    // 通过转义忽略下一个字符的特殊含义
+                    const char c3 = get();
+                    if (c3 == '\n') {
+                        ++line_;
                     }
+                    continue;
                 }
-                else if (c2 == c1) {
+                if (c2 == c1) {
                     break;
                 }
             }

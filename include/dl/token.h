@@ -37,7 +37,9 @@ inline bool is_white_char(const char c)
 }
 
 const std::unordered_map<char, char> character_for_escape = {
-    {'r', '\r'}, {'n', '\n'}, {'t', '\t'}, {'"', '\"'}, {'\'', '\''}, {'\\', '\\'}, {'f', '\f'}, {'b', '\b'}, {'v', '\v'}};
+    // {'r', '\r'}, {'n', '\n'}, {'t', '\t'}, {'"', '\"'}, {'\'', '\''}, {'\\', '\\'}, {'f', '\f'}, {'b', '\b'}, {'v', '\v'}
+    {'\'','\'' }
+};
 
 inline bool is_identifier_start_char(const char c)
 {

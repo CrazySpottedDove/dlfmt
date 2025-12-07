@@ -249,5 +249,6 @@ private:
     size_t                   position_;
     std::vector<Token>&      tokens_;
     std::unique_ptr<AstNode> ast_root_;
+    bool reached_eof_;
 };
 }   // namespace dl

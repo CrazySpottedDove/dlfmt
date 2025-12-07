@@ -6,11 +6,11 @@
 #include <filesystem>
 #include <fstream>
 #include <iostream>
+#include <omp.h>
 #include <spdlog/common.h>
 #include <spdlog/sinks/basic_file_sink.h>
 #include <spdlog/sinks/stdout_color_sinks.h>
 #include <spdlog/spdlog.h>
-#include <omp.h>
 using namespace dl;
 
 const std::string VERSION = "0.0.1";
@@ -42,10 +42,9 @@ static void FormatFile(const std::string& format_file)
     file.close();
 
     // tokenize
-    Tokenizer  tokenizer(std::move(content), format_file, WORK_MODE_FORMAT);
-    tokenizer.Print();
+    Tokenizer tokenizer(std::move(content), format_file, WORK_MODE_FORMAT);
     // parse
-    Parser     parser(tokenizer.getTokens(), format_file);
+    Parser parser(tokenizer.getTokens(), format_file);
 
     // 打开输出
     std::ofstream out_file(format_file, std::ios::binary | std::ios::trunc);
@@ -55,7 +54,6 @@ static void FormatFile(const std::string& format_file)
     out_file.flush();
     out_file.close();
 }
-// ...existing code...
 
 static void FormatDirectory(const std::string& format_directory)
 {
@@ -74,6 +72,7 @@ static void FormatDirectory(const std::string& format_directory)
             }
         }
     }
+    SPDLOG_INFO("{} .lua files collected.", files.size());
 
 // 并行格式化
 #pragma omp parallel for
@@ -147,8 +146,26 @@ int main(int argc, char* argv[])
     switch (work_mode) {
     case DLFMT_WORK_MODE_SHOW_HELP: PrintHelp(); return 0;
     case DLFMT_WORK_MODE_SHOW_VERSION: PrintVersion(); return 0;
-    case DLFMT_WORK_MODE_FORMAT_DIRECTORY: FormatDirectory(format_directory); return 0;
-    case DLFMT_WORK_MODE_FORMAT_FILE: FormatFile(format_file); return 0;
+    case DLFMT_WORK_MODE_FORMAT_DIRECTORY:
+    {
+        const auto start_time = std::chrono::high_resolution_clock::now();
+        FormatDirectory(format_directory);
+        const auto end_time = std::chrono::high_resolution_clock::now();
+        const auto duration =
+            std::chrono::duration_cast<std::chrono::milliseconds>(end_time - start_time).count();
+        SPDLOG_INFO("Formatted directory '{}' in {} ms.", format_directory, duration);
+        return 0;
+    }
+    case DLFMT_WORK_MODE_FORMAT_FILE:
+    {
+        const auto start_time = std::chrono::high_resolution_clock::now();
+        FormatFile(format_file);
+        const auto end_time = std::chrono::high_resolution_clock::now();
+        const auto duration =
+            std::chrono::duration_cast<std::chrono::milliseconds>(end_time - start_time).count();
+        SPDLOG_INFO("Formatted file '{}' in {} ms.", format_file, duration);
+        return 0;
+    }
     default: SPDLOG_ERROR("Unknown work mode."); return 1;
     }
 
