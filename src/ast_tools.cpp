@@ -62,11 +62,18 @@ void AstPrinter::print_expr(const AstNode* expr)
 {
     const auto type = expr->GetType();
     if (type == AstNodeType::BinopExpr) {
-        auto node = static_cast<const BinopExpr*>(expr);
+        auto       node = static_cast<const BinopExpr*>(expr);
+        const bool need_space =
+            (node->token_op_->source_ == "and" || node->token_op_->source_ == "or");
         print_expr(node->lhs_.get());
-        space();
-        print_token(node->token_op_);
-        space();
+        if (need_space) {
+            space();
+            print_token(node->token_op_);
+            space();
+        }
+        else {
+            print_token(node->token_op_);
+        }
         print_expr(node->rhs_.get());
         return;
     }
@@ -118,7 +125,6 @@ void AstPrinter::print_expr(const AstNode* expr)
                 print_expr(arg_call->arg_list_[i].get());
                 if (i < arg_call->token_comma_list_.size()) {
                     print_token(arg_call->token_comma_list_[i]);
-                    space();
                 }
             }
             print_token(arg_call->token_close_paren_);
@@ -144,7 +150,6 @@ void AstPrinter::print_expr(const AstNode* expr)
                 print_expr(arg_call->arg_list_[i].get());
                 if (i < arg_call->token_comma_list_.size()) {
                     print_token(arg_call->token_comma_list_[i]);
-                    space();
                 }
             }
             print_token(arg_call->token_close_paren_);
@@ -162,7 +167,6 @@ void AstPrinter::print_expr(const AstNode* expr)
             print_token(node->arg_list_[i]);
             if (i < node->token_arg_comma_list_.size()) {
                 print_token(node->token_arg_comma_list_[i]);
-                space();
             }
         }
         print_token(node->token_close_paren_);
@@ -186,16 +190,15 @@ void AstPrinter::print_expr(const AstNode* expr)
         auto node = static_cast<const TableLiteral*>(expr);
         print_token(node->token_open_brace_);
         if (!node->entry_list_.empty()) {
-            breakline();
             for (size_t i = 0; i < node->entry_list_.size(); ++i) {
                 auto       entry      = node->entry_list_[i].get();
                 const auto entry_type = entry->GetType();
                 if (entry_type == TableEntryType::Field) {
                     auto field_entry = static_cast<const FieldEntry*>(entry);
                     print_token(field_entry->field_);
-                    space();
+
                     print_token(field_entry->token_equals_);
-                    space();
+
                     print_expr(field_entry->value_.get());
                 }
                 else if (entry_type == TableEntryType::Index) {
@@ -203,9 +206,9 @@ void AstPrinter::print_expr(const AstNode* expr)
                     print_token(index_entry->token_open_bracket_);
                     print_expr(index_entry->index_.get());
                     print_token(index_entry->token_close_bracket_);
-                    space();
+
                     print_token(index_entry->token_equals_);
-                    space();
+
                     print_expr(index_entry->value_.get());
                 }
                 else if (entry_type == TableEntryType::Value) {
@@ -216,7 +219,6 @@ void AstPrinter::print_expr(const AstNode* expr)
                 if (i < node->token_separator_list_.size()) {
                     print_token(node->token_separator_list_[i]);
                 }
-                breakline();
             }
         }
         print_token(node->token_close_brace_);
@@ -261,18 +263,14 @@ void AstPrinter::print_stat(const AstNode* stat)
             print_token(node->var_list_[i]);
             if (i < node->token_var_comma_list_.size()) {
                 print_token(node->token_var_comma_list_[i]);
-                space();
             }
         }
         if (node->token_equals_) {
-            space();
             print_token(node->token_equals_);
-            space();
             for (size_t i = 0; i < node->expr_list_.size(); ++i) {
                 print_expr(node->expr_list_[i].get());
                 if (i < node->token_expr_comma_list_.size()) {
                     print_token(node->token_expr_comma_list_[i]);
-                    space();
                 }
             }
         }
@@ -292,7 +290,6 @@ void AstPrinter::print_stat(const AstNode* stat)
             print_token(function_node->arg_list_[i]);
             if (i < function_node->token_arg_comma_list_.size()) {
                 print_token(function_node->token_arg_comma_list_[i]);
-                space();
             }
         }
         print_token(function_node->token_close_paren_);
@@ -317,7 +314,6 @@ void AstPrinter::print_stat(const AstNode* stat)
             print_token(node->arg_list_[i]);
             if (i < node->token_arg_comma_list_.size()) {
                 print_token(node->token_arg_comma_list_[i]);
-                space();
             }
         }
         print_token(node->token_close_paren_);
@@ -346,7 +342,6 @@ void AstPrinter::print_stat(const AstNode* stat)
             print_token(node->var_list_[i]);
             if (i < node->token_var_comma_list_.size()) {
                 print_token(node->token_var_comma_list_[i]);
-                space();
             }
         }
         space();
@@ -356,7 +351,6 @@ void AstPrinter::print_stat(const AstNode* stat)
             print_expr(node->generator_list_[i].get());
             if (i < node->token_generator_comma_list_.size()) {
                 print_token(node->token_generator_comma_list_[i]);
-                space();
             }
         }
         space();
@@ -375,17 +369,13 @@ void AstPrinter::print_stat(const AstNode* stat)
             print_token(node->var_list_[i]);
             if (i < node->token_var_comma_list_.size()) {
                 print_token(node->token_var_comma_list_[i]);
-                space();
             }
         }
-        space();
         print_token(node->token_equals_);
-        space();
         for (size_t i = 0; i < node->range_list_.size(); ++i) {
             print_expr(node->range_list_[i].get());
             if (i < node->token_range_comma_list_.size()) {
                 print_token(node->token_range_comma_list_[i]);
-                space();
             }
         }
         space();
@@ -457,17 +447,13 @@ void AstPrinter::print_stat(const AstNode* stat)
             print_expr(node->lhs_[i].get());
             if (i < node->token_lhs_separator_list_.size()) {
                 print_token(node->token_lhs_separator_list_[i]);
-                space();
             }
         }
-        space();
         print_token(node->token_equals_);
-        space();
         for (size_t i = 0; i < node->rhs_.size(); ++i) {
             print_expr(node->rhs_[i].get());
             if (i < node->token_rhs_separator_list_.size()) {
                 print_token(node->token_rhs_separator_list_[i]);
-                space();
             }
         }
         breakline();
@@ -627,9 +613,10 @@ void AstPrinter::print_expr_format_mode(const AstNode* expr)
         if (!node->entry_list_.empty()) {
             // 对于纯 value entry 且较短的表，尝试一行输出
             bool one_line = true;
-            if(node->entry_list_.size() > 10){
+            if (node->entry_list_.size() > 10) {
                 one_line = false;
-            }else{
+            }
+            else {
                 for (size_t i = 0; i < node->entry_list_.size(); ++i) {
                     const auto entry_type = node->entry_list_[i]->GetType();
                     if (entry_type != TableEntryType::Value) {
@@ -639,10 +626,10 @@ void AstPrinter::print_expr_format_mode(const AstNode* expr)
                 }
             }
 
-            if(one_line){
+            if (one_line) {
                 // 单行输出
                 for (size_t i = 0; i < node->entry_list_.size(); ++i) {
-                    auto       entry      = node->entry_list_[i].get();
+                    auto entry       = node->entry_list_[i].get();
                     auto value_entry = static_cast<const ValueEntry*>(entry);
                     print_expr_format_mode(value_entry->value_.get());
                     // Other entry type UNREACHABLE
@@ -651,7 +638,8 @@ void AstPrinter::print_expr_format_mode(const AstNode* expr)
                         space();
                     }
                 }
-            }else{
+            }
+            else {
                 breakline_format_mode();
                 inc_indent();
                 for (size_t i = 0; i < node->entry_list_.size(); ++i) {
@@ -696,7 +684,8 @@ void AstPrinter::print_expr_format_mode(const AstNode* expr)
     // UNREACHABLE
 }
 
-bool AstPrinter::is_block_stat(AstNodeType type){
+bool AstPrinter::is_block_stat(AstNodeType type)
+{
     static const std::unordered_set<AstNodeType> block_stats_ = {
         AstNodeType::LocalFunctionStat,
         AstNodeType::FunctionStat,
@@ -720,21 +709,25 @@ void AstPrinter::print_stat_format_mode(const AstNode* stat)
         return;
     }
 
-    if(is_block_stat(stat->GetType())){
-        if(!is_block_start_){
+    if (is_block_stat(stat->GetType())) {
+        if (!is_block_start_) {
             out_.put('\n');
-        }else{
+        }
+        else {
             is_block_start_ = false;
         }
-    }else{
-        if(last_is_block_stat_){
-            if(!is_block_start_){
+    }
+    else {
+        if (last_is_block_stat_) {
+            if (!is_block_start_) {
                 out_.put('\n');
-            }else{
+            }
+            else {
                 is_block_start_ = false;
             }
             last_is_block_stat_ = false;
-        }else{
+        }
+        else {
             is_block_start_ = false;
         }
     }
@@ -993,7 +986,7 @@ void AstPrinter::print_stat_format_mode(const AstNode* stat)
     }
 
     breakline_format_mode();
-    if(is_block_stat(stat->GetType())){
+    if (is_block_stat(stat->GetType())) {
         last_is_block_stat_ = true;
     }
     return;
@@ -1016,7 +1009,8 @@ void PrintAst(const AstNode* ast, std::ostream& out)
     printer.PrintAst(ast);
 }
 
-void PrintAst(const AstNode* ast, const std::vector<CommentToken>& comment_tokens, std::ostream& out)
+void PrintAst(const AstNode* ast, const std::vector<CommentToken>& comment_tokens,
+              std::ostream& out)
 {
     AstPrinter printer(out);
     printer.PrintAst(ast, comment_tokens);

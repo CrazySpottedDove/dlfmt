@@ -165,8 +165,6 @@ void Tokenizer::tokenize_compile()
         }
 
         if (position_ > token_start) {
-            // addToken(TokenType::Comment, token_start);
-            // token_start = position_;
             continue;
         }
 
@@ -510,9 +508,6 @@ void Tokenizer::tokenize_format()
         if (c1 == '.') {
             if (peek() == '.') {
                 get();
-                if (peek() == '.') {
-                    get();
-                }
             }
             addToken(TokenType::Symbol, token_start);
             continue;

@@ -4,9 +4,18 @@ dl 的目标是制作一个可以生成运行性能更好的 lua 代码的 lua �
 
 ## dlfmt
 
-dlfmt 是 dl 系列衍生的 lua 代码格式化工具，性能优秀。dlfmt 暂时不开放可配置项，且会武断地处理空行，如果你的项目对格式化性能要求极高，且对于格式化风格无所谓，可以尝试使用 dlfmt。其使用方法如下：
+dlfmt 是 dl 系列衍生的 lua 代码格式化与压缩工具，性能优秀。dlfmt 暂时不开放可配置项，且会武断地处理空行，如果你的项目对格式化性能要求极高，且对于格式化风格无所谓，可以尝试使用 dlfmt。其使用方法如下：
 
-![alt text](mdPaste/README/image.png)
+```sh
+Usage: dlfmt [options]
+Options:
+  --help                 Show this help message and exit
+  --version              Show version information and exit
+  --format-file <file>   Format the specified file
+  --format-directory <dir> Format all files in the specified directory recursively
+  --compress-file <file>   Compress the specified file
+  --compress-directory <dir> Compress all files in the specified directory recursively
+```
 
 以下是 luaminify 的代码片段经过 dlfmt 格式化后的示例：
 
@@ -61,3 +70,4 @@ else
 end
 ```
 
+压缩不处理变量名压缩。
