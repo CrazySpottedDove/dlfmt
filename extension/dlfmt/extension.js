@@ -39,7 +39,36 @@ function activate(context) {
         }
     });
 
-    context.subscriptions.push(output, formatFileCmd, formatDirCmd);
+    // 新增：压缩文件命令
+    const compressFileCmd = vscode.commands.registerCommand('dlfmt.compressFile', async (uri) => {
+        try {
+            const filePath = await resolveFilePath(uri);
+            if (!filePath) return;
+            await ensureSavedIfActive(filePath);
+
+            const exe = await resolveDlfmtExecutable(context, output);
+            await runDlfmt(exe, ['--compress-file', filePath], path.dirname(filePath), output);
+            vscode.window.showInformationMessage(`dlfmt: 已压缩文件 ${path.basename(filePath)}`);
+        } catch (err) {
+            reportError(err, output);
+        }
+    });
+
+    // 新增：压缩目录命令
+    const compressDirCmd = vscode.commands.registerCommand('dlfmt.compressDirectory', async (uri) => {
+        try {
+            const dirPath = await resolveDirPath(uri);
+            if (!dirPath) return;
+
+            const exe = await resolveDlfmtExecutable(context, output);
+            await runDlfmt(exe, ['--compress-directory', dirPath], dirPath, output);
+            vscode.window.showInformationMessage(`dlfmt: 已压缩文件夹 ${dirPath}`);
+        } catch (err) {
+            reportError(err, output);
+        }
+    });
+
+    context.subscriptions.push(output, formatFileCmd, formatDirCmd, compressFileCmd, compressDirCmd);
 
     // 格式化器，复用主输出通道
     const formatter = vscode.languages.registerDocumentFormattingEditProvider('lua', {

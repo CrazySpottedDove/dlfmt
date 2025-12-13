@@ -1,9 +1,9 @@
 {
 	"name": "dlfmt",
-    "publisher": "CrazySpottedDove",
+	"publisher": "CrazySpottedDove",
 	"displayName": "dlfmt",
 	"description": "a blazing fast lua formatter, only support windows & linux",
-	"version": "0.0.1",
+	"version": "0.0.4",
 	"engines": {
 		"vscode": "^1.106.0"
 	},
@@ -20,6 +20,14 @@
 			{
 				"command": "dlfmt.formatDirectory",
 				"title": "dlfmt: 格式化文件夹"
+			},
+			{
+				"command": "dlfmt.compressFile",
+				"title": "dlfmt: 压缩文件"
+			},
+			{
+				"command": "dlfmt.compressDirectory",
+				"title": "dlfmt: 压缩文件夹"
 			}
 		],
 		"menus": {
@@ -31,6 +39,14 @@
 				{
 					"command": "dlfmt.formatDirectory",
 					"when": "true"
+				},
+				{
+					"command": "dlfmt.compressFile",
+					"when": "true"
+				},
+				{
+					"command": "dlfmt.compressDirectory",
+					"when": "true"
 				}
 			],
 			"explorer/context": [
@@ -41,6 +57,16 @@
 				},
 				{
 					"command": "dlfmt.formatDirectory",
+					"group": "navigation",
+					"when": "resourceScheme == file && explorerResourceIsFolder == true"
+				},
+				{
+					"command": "dlfmt.compressFile",
+					"group": "navigation",
+					"when": "resourceScheme == file && explorerResourceIsFolder == false"
+				},
+				{
+					"command": "dlfmt.compressDirectory",
 					"group": "navigation",
 					"when": "resourceScheme == file && explorerResourceIsFolder == true"
 				}
@@ -87,7 +113,9 @@
 	},
 	"activationEvents": [
 		"onCommand:dlfmt.formatFile",
-		"onCommand:dlfmt.formatDirectory"
+		"onCommand:dlfmt.formatDirectory",
+		"onCommand:dlfmt.compressFile",
+		"onCommand:dlfmt.compressDirectory"
 	],
 	"devDependencies": {
 		"@types/vscode": "^1.106.0",

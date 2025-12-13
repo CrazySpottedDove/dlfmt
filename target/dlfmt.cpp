@@ -24,7 +24,8 @@ static void PrintHelp()
     printf("  --format-file <file>   Format the specified file\n");
     printf("  --format-directory <dir> Format all files in the specified directory recursively\n");
     printf("  --compress-file <file>   Compress the specified file\n");
-    printf("  --compress-directory <dir> Compress all files in the specified directory recursively\n");
+    printf(
+        "  --compress-directory <dir> Compress all files in the specified directory recursively\n");
 }
 
 static void PrintVersion()
@@ -210,7 +211,8 @@ int main(int argc, char* argv[])
                 SPDLOG_ERROR("No directory specified after --format-directory");
                 return 1;
             }
-        }else if(arg == "--compress-file"){
+        }
+        else if (arg == "--compress-file") {
             if (i + 1 < argc) {
                 format_file = argv[i + 1];
                 work_mode   = DLFMT_WORK_MODE_COMPRESS_FILE;
@@ -220,7 +222,8 @@ int main(int argc, char* argv[])
                 SPDLOG_ERROR("No file specified after --compress-file");
                 return 1;
             }
-        }else if(arg == "--compress-directory"){
+        }
+        else if (arg == "--compress-directory") {
             if (i + 1 < argc) {
                 format_directory = argv[i + 1];
                 work_mode        = DLFMT_WORK_MODE_COMPRESS_DIRECTORY;

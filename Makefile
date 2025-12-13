@@ -8,7 +8,7 @@ BUILD_DIR_DEBUG = build-debug
 
 # BUILD_WIN = build-win
 
-.PHONY: all vcpkg clean debug release help build test
+.PHONY: all vcpkg clean debug release help build release-win
 
 all: vcpkg
 	cmake -DCMAKE_TOOLCHAIN_FILE=$(VCPKG_TOOLCHAIN) -B $(BUILD_DIR_RELEASE) -DCMAKE_BUILD_TYPE=Release -DCMAKE_EXPORT_COMPILE_COMMANDS=ON -S .
@@ -43,6 +43,10 @@ help:
 	@echo "  clean    - Remove the build directory"
 	@echo "  help     - Show this help message"
 
-# release-win:
-# 	MXE_USE_CCACHE=0 x86_64-w64-mingw32.static-cmake -B $(BUILD_WIN) -DCMAKE_BUILD_TYPE=Release -S .
-# 	cmake --build $(BUILD_WIN) --config Release
+release-win:
+	cmake -DCMAKE_TOOLCHAIN_FILE="./toolchains/mingw-windows-x64.cmake" -DCMAKE_BUILD_TYPE=Release -S . -B build-win
+	cmake --build build-win --config Release
+
+bin-extension-dlfmt: release release-win
+	cp $(BUILD_DIR_RELEASE)/dlfmt extension/dlfmt/bin/linux/
+	cp build-win/dlfmt.exe extension/dlfmt/bin/win32/
