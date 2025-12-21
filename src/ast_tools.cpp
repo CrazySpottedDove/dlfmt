@@ -244,7 +244,7 @@ void AstPrinter::print_stat(const AstNode* stat)
     if (stat->GetType() == AstNodeType::ReturnStat) {
         auto node = static_cast<const ReturnStat*>(stat);
         print_token(node->token_return_);
-        if(!node->expr_list_.empty()){
+        if (!node->expr_list_.empty()) {
             space();
             for (size_t i = 0; i < node->expr_list_.size(); ++i) {
                 print_expr(node->expr_list_[i].get());
@@ -738,7 +738,7 @@ void AstPrinter::do_format_stat_group_rules(const AstNode* stat) noexcept
     auto stat_group = get_format_stat_group(stat);
 
     // 块级语句之间也仍然要换行
-    if(stat_group == FormatStatGroup::Block){
+    if (stat_group == FormatStatGroup::Block) {
         out_.put('\n');
         return;
     }
@@ -771,7 +771,7 @@ void AstPrinter::print_stat_format_mode(const AstNode* stat)
     else if (stat->GetType() == AstNodeType::ReturnStat) {
         auto node = static_cast<const ReturnStat*>(stat);
         print_token_format_mode(node->token_return_);
-        if(!node->expr_list_.empty()){
+        if (!node->expr_list_.empty()) {
             space();
             for (size_t i = 0; i < node->expr_list_.size(); ++i) {
                 print_expr_format_mode(node->expr_list_[i].get());
@@ -1055,6 +1055,14 @@ void AstPrinter::PrintAst(const AstNode* ast, const std::vector<CommentToken>& c
 {
     comment_tokens_ = &comment_tokens;
     print_stat_format_mode(ast);
+
+    // 注意把文件末尾的注释也打印出来
+    while (comment_index_ < comment_tokens_->size()) {
+        out_.put('\n');
+        indent();
+        out_ << comment_token()->source_;
+        ++comment_index_;
+    }
 }
 
 void PrintAst(const AstNode* ast, std::ostream& out)

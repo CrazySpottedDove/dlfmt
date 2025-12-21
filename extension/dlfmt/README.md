@@ -1,6 +1,6 @@
 # dlfmt
 
-dlfmt 是 dl 系列衍生的 lua 代码格式化与压缩工具，性能优秀。dlfmt 暂时不开放可配置项，且会武断地处理空行，如果你的项目对格式化性能要求极高，且对于格式化风格无所谓，可以尝试使用 dlfmt。其使用方法如下：
+dlfmt 是 dl 系列衍生的 lua 代码格式化与压缩工具，性能优秀。如果你的项目对格式化性能要求极高，且不愿意配置格式化风格，可以尝试使用 dlfmt。其使用方法如下：
 
 ```sh
 Usage: dlfmt [options]
@@ -14,77 +14,215 @@ Options:
   --json-task <file>     Process tasks defined in the specified JSON file
 ```
 
+## 性能
+
+`dlfmt` 的性能在 lua 格式化插件中属于顶尖水平。
+
+| 文件名            | 行数  | 字符数  | 工具        | 平均时间 (s) |
+|-------------------|-------|---------|-------------|--------------|
+| hero_scripts.lua  | 29118 | 765150  | lua-format  | 1.1080       |
+| hero_scripts.lua  | 29118 | 765150  | stylua      | 1.5490       |
+| hero_scripts.lua  | 29118 | 765150  | dlfmt       | 0.0434       |
+| go_towers.lua     | 53804 | 1365652 | lua-format  | 21.2510      |
+| go_towers.lua     | 53804 | 1365652 | stylua      | 2.5120       |
+| go_towers.lua     | 53804 | 1365652 | dlfmt       | 0.1080       |
+| lldebugger.lua    | 2548  | 60634   | lua-format  | 0.1348       |
+| lldebugger.lua    | 2548  | 60634   | stylua      | 0.2504       |
+| lldebugger.lua    | 2548  | 60634   | dlfmt       | 0.0045       |
+
 ## 格式化效果
 
 以下是 luaminify 的代码片段经过 dlfmt 格式化后的示例：
 
 ```lua
-local function usageError()
-	error(
-		"\nusage: minify <file> or unminify <file>\n"
-			.. "  The modified code will be printed to the stdout, pipe it to a file, the\n"
-			.. "  lua interpreter, or something else as desired EG:\n\n"
-			.. "        lua minify.lua minify input.lua > output.lua\n\n"
-			.. "  * minify will minify the code in the file.\n"
-			.. "  * unminify will beautify the code and replace the variable names with easily\n"
-			.. "    find-replacable ones to aide in reverse engineering minified code.\n",
-		0
-	)
-end
+local function MinifyVariables_2(globalScope, rootScope)
+	-- Variable names and other names that are fixed, that we cannot use
+	-- Either these are Lua keywords, or globals that are not assigned to,
+	-- that is environmental globals that are assigned elsewhere beyond our
+	-- control.
+	local globalUsedNames = {}
 
-local args = { ... }
+	for kw, _ in pairs(Keywords) do
+		globalUsedNames[kw] = true
+	end
 
-if #args ~= 2 then
-	usageError()
-end
+	-- Gather a list of all of the variables that we will rename
+	local allVariables = {}
+	local allLocalVariables = {}
 
-local sourceFile = io.open(args[2], "r")
+	do
+		-- Add applicable globals
+		for _, var in pairs(globalScope) do
+			if var.AssignedTo then
+				-- We can try to rename this global since it was assigned to
+				-- (and thus presumably initialized) in the script we are
+				-- minifying.
+				table.insert(allVariables, var)
+			else
+				-- We can't rename this global, mark it as an unusable name
+				-- and don't add it to the nename list
+				globalUsedNames[var.Name] = true
+			end
+		end
 
-if not sourceFile then
-	error("Could not open the input file `" .. args[2] .. "`", 0)
-end
+		-- Recursively add locals, we can rename all of those
+		local function addFrom(scope)
+			for _, var in pairs(scope.VariableList) do
+				table.insert(allVariables, var)
+				table.insert(allLocalVariables, var)
+			end
 
-local data = sourceFile:read("*all")
-local ast = CreateLuaParser(data)
-local global_scope, root_scope = AddVariableInfo(ast)
+			for _, childScope in pairs(scope.ChildScopeList) do
+				addFrom(childScope)
+			end
+		end
 
-local function minify(ast, global_scope, root_scope)
-	MinifyVariables(global_scope, root_scope)
-	StripAst(ast)
-	PrintAst(ast)
-end
+		addFrom(rootScope)
+	end
 
-local function beautify(ast, global_scope, root_scope)
-	BeautifyVariables(global_scope, root_scope)
-	FormatAst(ast)
-	PrintAst(ast)
-end
+	-- Add used name arrays to variables
+	for _, var in pairs(allVariables) do
+		var.UsedNameArray = {}
+	end
 
-if args[1] == "minify" then
-	minify(ast, global_scope, root_scope)
-elseif args[1] == "unminify" then
-	beautify(ast, global_scope, root_scope)
-else
-	usageError()
+	-- Sort the least used variables first
+	table.sort(allVariables, function(a, b)
+		return #a.RenameList < #b.RenameList
+	end)
+
+	-- Lazy generator for valid names to rename to
+	local nextValidNameIndex = 0
+	local varNamesLazy = {}
+
+	local function varIndexToValidVarName(i)
+		local name = varNamesLazy[i]
+
+		if not name then
+			repeat
+				name = indexToVarName(nextValidNameIndex)
+				nextValidNameIndex = nextValidNameIndex + 1
+			until not globalUsedNames[name]
+
+			varNamesLazy[i] = name
+		end
+
+		return name
+	end
+
+	-- For each variable, go to rename it
+	for _, var in pairs(allVariables) do
+		-- Lazy... todo: Make theis pair a proper for-each-pair-like set of loops
+		-- rather than using a renamed flag.
+		var.Renamed = true
+
+		-- Find the first unused name
+		local i = 1
+
+		while var.UsedNameArray[i] do
+			i = i + 1
+		end
+
+		-- Rename the variable to that name
+		var:Rename(varIndexToValidVarName(i))
+
+		if var.Scope then
+			-- Now we need to mark the name as unusable by any variables:
+			--  1) At the same depth that overlap lifetime with this one
+			--  2) At a deeper level, which have a reference to this variable in their lifetimes
+			--  3) At a shallower level, which are referenced during this variable's lifetime
+			for _, otherVar in pairs(allVariables) do
+				if not otherVar.Renamed then
+					if not otherVar.Scope or otherVar.Scope.Depth < var.Scope.Depth then
+						-- Check Global variable (Which is always at a shallower level)
+						--  or
+						-- Check case 3
+						-- The other var is at a shallower depth, is there a reference to it
+						-- durring this variable's lifetime?
+						for _, refAt in pairs(otherVar.ReferenceLocationList) do
+							if refAt >= var.BeginLocation and refAt <= var.ScopeEndLocation then
+								-- Collide
+								otherVar.UsedNameArray[i] = true
+
+								break
+							end
+						end
+					elseif otherVar.Scope.Depth > var.Scope.Depth then
+						-- Check Case 2
+						-- The other var is at a greater depth, see if any of the references
+						-- to this variable are in the other var's lifetime.
+						for _, refAt in pairs(var.ReferenceLocationList) do
+							if refAt >= otherVar.BeginLocation and refAt <= otherVar.ScopeEndLocation then
+								-- Collide
+								otherVar.UsedNameArray[i] = true
+
+								break
+							end
+						end
+					else --otherVar.Scope.Depth must be equal to var.Scope.Depth
+						-- Check case 1
+						-- The two locals are in the same scope
+						-- Just check if the usage lifetimes overlap within that scope. That is, we
+						-- can shadow a local variable within the same scope as long as the usages
+						-- of the two locals do not overlap.
+						if var.BeginLocation < otherVar.EndLocation and var.EndLocation > otherVar.BeginLocation then
+							otherVar.UsedNameArray[i] = true
+						end
+					end
+				end
+			end
+		else
+			-- This is a global var, all other globals can't collide with it, and
+			-- any local variable with a reference to this global in it's lifetime
+			-- can't collide with it.
+			for _, otherVar in pairs(allVariables) do
+				if not otherVar.Renamed then
+					if otherVar.Type == 'Global' then
+						otherVar.UsedNameArray[i] = true
+					elseif otherVar.Type == 'Local' then
+						-- Other var is a local, see if there is a reference to this global within
+						-- that local's lifetime.
+						for _, refAt in pairs(var.ReferenceLocationList) do
+							if refAt >= otherVar.BeginLocation and refAt <= otherVar.ScopeEndLocation then
+								-- Collide
+								otherVar.UsedNameArray[i] = true
+
+								break
+							end
+						end
+					else
+						assert(false, "unreachable")
+					end
+				end
+			end
+		end
+	end
+-- --
+-- print("Total Variables: "..#allVariables)
+-- print("Total Range: "..rootScope.BeginLocation.."-"..rootScope.EndLocation)
+-- print("")
+-- for _, var in pairs(allVariables) do
+-- 	io.write("`"..var.Name.."':\n\t#symbols: "..#var.RenameList..
+-- 		"\n\tassigned to: "..tostring(var.AssignedTo))
+-- 	if var.Type == 'Local' then
+-- 		io.write("\n\trange: "..var.BeginLocation.."-"..var.EndLocation)
+-- 		io.write("\n\tlocal type: "..var.Info.Type)
+-- 	end
+-- 	io.write("\n\n")
+-- end
+-- -- First we want to rename all of the variables to unique temoraries, so that we can
+-- -- easily use the scope::GetVar function to check whether renames are valid.
+-- local temporaryIndex = 0
+-- for _, var in pairs(allVariables) do
+-- 	var:Rename('_TMP_'..temporaryIndex..'_')
+-- 	temporaryIndex = temporaryIndex + 1
+-- end
+-- For each variable, we need to build a list of names that collide with it
+--
+--error()
 end
 ```
 
 压缩不处理变量名压缩。
-
-## 性能
-
-`dlfmt` 的性能在 lua 格式化插件中属于顶尖水平。
-
-```sh
-> ./build-release/dlfmt --json-task ./task.json
-[info dlfmt.cpp:296] 1206 files to format collected.
-[info dlfmt.cpp:297] 364 files to compress collected.
-[info dlfmt.cpp:471] Processed json task './task.json' in 445 ms.
-> ./build-release/dlfmt --json-task ./task.json
-[info dlfmt.cpp:296] 0 files to format collected.
-[info dlfmt.cpp:297] 0 files to compress collected.
-[info dlfmt.cpp:471] Processed json task './task.json' in 20 ms.
-```
 
 ## Json Task
 
@@ -108,3 +246,5 @@ end
 	]
 }
 ```
+
+## [More: Click Here!](https://crazyspotteddove.github.io/projects/dlfmt/)
