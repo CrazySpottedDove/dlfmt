@@ -728,22 +728,6 @@ AstPrinter::FormatStatGroup AstPrinter::get_format_stat_group(const AstNode* sta
     }
 }
 
-// void AstPrinter::set_format_stat_group(const AstNode* stat) noexcept
-// {
-//     switch (stat->GetType()) {
-//     case AstNodeType::BreakStat: set_format_stat_group(FormatStatGroup::Break); break;
-//     case AstNodeType::ReturnStat: set_format_stat_group(FormatStatGroup::Return); break;
-//     case AstNodeType::LocalVarStat: set_format_stat_group(FormatStatGroup::LocalDecl); break;
-//     case AstNodeType::LocalFunctionStat:
-//     case AstNodeType::FunctionStat:
-//     case AstNodeType::RepeatStat:
-//     case AstNodeType::GenericForStat:
-//     case AstNodeType::NumericForStat:
-//     case AstNodeType::WhileStat:
-//     case AstNodeType::DoStat:
-//     case AstNodeType::IfStat:
-//     }
-// }
 
 void AstPrinter::do_format_stat_group_rules(const AstNode* stat) noexcept
 {

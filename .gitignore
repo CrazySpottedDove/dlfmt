@@ -12,3 +12,4 @@ bin/
 node_modules/
 .dlfmt_cache.json
 task.json
+vcpkg_installed/

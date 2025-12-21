@@ -18,7 +18,7 @@
 #include <vector>
 using namespace dl;
 
-const std::string VERSION = "0.0.5";
+const std::string VERSION = "0.0.7";
 
 static void PrintHelp()
 {
@@ -226,19 +226,22 @@ static void ProcessJsonTask(const std::string& json_file)
     std::vector<std::string> format_tasks;
     std::vector<std::string> compress_tasks;
 
+    std::filesystem::path work_dir = std::filesystem::current_path();
+
     // 直接先收集任务
     for (const auto& task : tasks) {
         if (task["type"] == "compress") {
-            std::vector<std::string> exclude;
+            std::vector<std::filesystem::path> exclude;
             if (task.contains("exclude")) {
-                for (const auto& ex : task["exclude"]) exclude.push_back(ex);
+                for (const auto& ex : task["exclude"])
+                    exclude.push_back(std::filesystem::absolute(work_dir / ex.get<std::string>()));
             }
-            // compress_tasks.push_back(task["directory"]);
             // 遍历目录，收集所有lua文件
             for (const auto& entry :
                  std::filesystem::recursive_directory_iterator(task["directory"])) {
                 if (entry.is_regular_file() && entry.path().extension() == ".lua") {
-                    std::string abs_path = std::filesystem::absolute(entry.path().string()).string();
+                    std::string abs_path =
+                        std::filesystem::absolute(entry.path().string()).string();
 
                     // 文件没有变，不需要加入任务清单
                     if (!ShouldProcessFile(abs_path, file_cache)) {
@@ -247,7 +250,7 @@ static void ProcessJsonTask(const std::string& json_file)
 
                     bool is_excluded = false;
                     for (const auto& ex : exclude) {
-                        if (abs_path.compare(0, ex.size(), ex) == 0) {
+                        if (abs_path.compare(0, ex.string().size(), ex.string()) == 0) {
                             is_excluded = true;
                             break;
                         }
@@ -261,16 +264,19 @@ static void ProcessJsonTask(const std::string& json_file)
             }
         }
         else if (task["type"] == "format") {
-            std::vector<std::string> exclude;
+            std::vector<std::filesystem::path> exclude;
             if (task.contains("exclude")) {
-                for (const auto& ex : task["exclude"]) exclude.push_back(ex);
+                for (const auto& ex : task["exclude"]){
+                    exclude.push_back(std::filesystem::absolute(work_dir / ex.get<std::string>()));
+                }
             }
-            // compress_tasks.push_back(task["directory"]);
+
             // 遍历目录，收集所有lua文件
             for (const auto& entry :
                  std::filesystem::recursive_directory_iterator(task["directory"])) {
                 if (entry.is_regular_file() && entry.path().extension() == ".lua") {
-                    std::string abs_path = std::filesystem::absolute(entry.path().string()).string();
+                    std::string abs_path =
+                        std::filesystem::absolute(entry.path().string()).string();
 
                     // 文件没有变，不需要加入任务清单
                     if (!ShouldProcessFile(abs_path, file_cache)) {
@@ -278,8 +284,9 @@ static void ProcessJsonTask(const std::string& json_file)
                     }
 
                     bool is_excluded = false;
+
                     for (const auto& ex : exclude) {
-                        if (abs_path.compare(0, ex.size(), ex) == 0) {
+                        if (abs_path.compare(0, ex.string().size(), ex.string()) == 0) {
                             is_excluded = true;
                             break;
                         }
