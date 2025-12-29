@@ -823,11 +823,8 @@ void AstPrinter::print_stat_format_mode(const AstNode* stat)
             }
         }
         print_token_format_mode(function_node->token_close_paren_);
-        // breakline_format_mode();
-        // inc_indent();
         enter_group_format_mode();
         print_stat_format_mode(function_node->body_.get());
-        // dec_indent();
         exit_group_format_mode();
         indent();
         print_token_format_mode(function_node->token_end_);
@@ -851,11 +848,8 @@ void AstPrinter::print_stat_format_mode(const AstNode* stat)
             }
         }
         print_token_format_mode(node->token_close_paren_);
-        // breakline_format_mode();
-        // inc_indent();
         enter_group_format_mode();
         print_stat_format_mode(node->body_.get());
-        // dec_indent();
         exit_group_format_mode();
         indent();
         print_token_format_mode(node->token_end_);
@@ -863,11 +857,8 @@ void AstPrinter::print_stat_format_mode(const AstNode* stat)
     else if (stat->GetType() == AstNodeType::RepeatStat) {
         auto node = static_cast<const RepeatStat*>(stat);
         print_token_format_mode(node->token_repeat_);
-        // breakline_format_mode();
-        // inc_indent();
         enter_group_format_mode();
         print_stat_format_mode(node->body_.get());
-        // dec_indent();
         exit_group_format_mode();
         indent();
         print_token_format_mode(node->token_until_);
@@ -897,11 +888,8 @@ void AstPrinter::print_stat_format_mode(const AstNode* stat)
         }
         space();
         print_token_format_mode(node->token_do_);
-        // breakline_format_mode();
-        // inc_indent();
         enter_group_format_mode();
         print_stat_format_mode(node->body_.get());
-        // dec_indent();
         exit_group_format_mode();
         indent();
         print_token_format_mode(node->token_end_);
@@ -929,11 +917,8 @@ void AstPrinter::print_stat_format_mode(const AstNode* stat)
         }
         space();
         print_token_format_mode(node->token_do_);
-        // breakline_format_mode();
-        // inc_indent();
         enter_group_format_mode();
         print_stat_format_mode(node->body_.get());
-        // dec_indent();
         exit_group_format_mode();
         indent();
         print_token_format_mode(node->token_end_);
@@ -945,11 +930,8 @@ void AstPrinter::print_stat_format_mode(const AstNode* stat)
         print_expr_format_mode(node->condition_.get());
         space();
         print_token_format_mode(node->token_do_);
-        // breakline_format_mode();
-        // inc_indent();
         enter_group_format_mode();
         print_stat_format_mode(node->body_.get());
-        // dec_indent();
         exit_group_format_mode();
         indent();
         print_token_format_mode(node->token_end_);
@@ -957,11 +939,8 @@ void AstPrinter::print_stat_format_mode(const AstNode* stat)
     else if (stat->GetType() == AstNodeType::DoStat) {
         auto node = static_cast<const DoStat*>(stat);
         print_token_format_mode(node->token_do_);
-        // breakline_format_mode();
-        // inc_indent();
         enter_group_format_mode();
         print_stat_format_mode(node->body_.get());
-        // dec_indent();
         exit_group_format_mode();
         indent();
         print_token_format_mode(node->token_end_);
@@ -973,11 +952,8 @@ void AstPrinter::print_stat_format_mode(const AstNode* stat)
         print_expr_format_mode(node->condition_.get());
         space();
         print_token_format_mode(node->token_then_);
-        // breakline_format_mode();
-        // inc_indent();
         enter_group_format_mode();
         print_stat_format_mode(node->body_.get());
-        // dec_indent();
         exit_group_format_mode();
         for (size_t i = 0; i < node->else_clause_list_.size(); ++i) {
             indent();
@@ -989,12 +965,8 @@ void AstPrinter::print_stat_format_mode(const AstNode* stat)
                 space();
                 print_token_format_mode(clause->GetTokenThen());
             }
-            // breakline_format_mode();
-            // set_format_stat_group(FormatStatGroup::None);
-            // inc_indent();
             enter_group_format_mode();
             print_stat_format_mode(clause->body_.get());
-            // dec_indent();
             exit_group_format_mode();
         }
         indent();
@@ -1039,9 +1011,6 @@ void AstPrinter::print_stat_format_mode(const AstNode* stat)
 
     // Statement 后统一 breakline()
     breakline_format_mode();
-    // if (is_block_stat(stat->GetType())) {
-    //     last_is_block_stat_ = true;
-    // }
     set_format_stat_group(get_format_stat_group(stat));
     return;
 }
