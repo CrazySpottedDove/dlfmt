@@ -1,8 +1,9 @@
 #pragma once
+#include <bitset>
+#include <string>
 #include <string_view>
 #include <unordered_map>
 #include <unordered_set>
-#include <string>
 namespace dl {
 enum class TokenType
 {
@@ -36,10 +37,6 @@ inline bool is_white_char(const char c)
     return c == ' ' || c == '\n' || c == '\t' || c == '\r';
 }
 
-const std::unordered_map<char, char> character_for_escape = {
-    {'\'','\'' }
-};
-
 inline bool is_identifier_start_char(const char c)
 {
     return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || c == '_';
@@ -60,11 +57,25 @@ inline bool is_hex_digit_char(const char c)
     return (c >= '0' && c <= '9') || (c >= 'a' && c <= 'f') || (c >= 'A' && c <= 'F');
 }
 
+// inline bool is_symbol_char(const char c)
+// {
+//     const std::unordered_set<char> symbols = {
+//         '+', '-', '*', '/', '^', '%', ',', '{', '}', '[', ']', '(', ')', ';', '#', '.', ':'};
+//     return symbols.find(c) != symbols.end();
+// }
+
 inline bool is_symbol_char(const char c)
 {
-    const std::unordered_set<char> symbols = {
-        '+', '-', '*', '/', '^', '%', ',', '{', '}', '[', ']', '(', ')', ';', '#', '.', ':'};
-    return symbols.find(c) != symbols.end();
+    static const std::bitset<256> table = [] {
+        std::bitset<256> b;
+        const char       syms[] = {
+            '+', '-', '*', '/', '^', '%', ',', '{', '}', '[', ']', '(', ')', ';', '#', '.', ':'};
+        for (char ch : syms) {
+            b.set(static_cast<unsigned char>(ch));
+        }
+        return b;
+    }();
+    return table.test(static_cast<unsigned char>(c));
 }
 
 inline bool is_equal_symbol_char(const char c){

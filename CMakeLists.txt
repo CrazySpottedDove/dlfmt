@@ -3,14 +3,14 @@ project(dl)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
-add_compile_options(-Wall -Wextra)
-
+add_compile_options(-Wall -Wextra -Wpedantic)
+set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -O3")
 find_package(spdlog CONFIG REQUIRED)
 find_package(magic_enum CONFIG REQUIRED)
 find_package(OpenMP REQUIRED)
 find_package(nlohmann_json REQUIRED)
+
 add_library(dl_core STATIC
-    src/tokenizer.cpp
     src/ast_tools.cpp
     src/parser.cpp
 )

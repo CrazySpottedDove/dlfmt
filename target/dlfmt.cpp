@@ -1,5 +1,4 @@
 #include "dl/ast_tools.h"
-#include "dl/macros.h"
 #include "dl/parser.h"
 #include "dl/tokenizer.h"
 #include <cstdint>
@@ -51,7 +50,8 @@ static void FormatFile(const std::string& format_file)
     file.close();
 
     // tokenize
-    Tokenizer tokenizer(std::move(content), format_file, Tokenizer::WorkMode::format);
+    Tokenizer<TokenizeMode::format> tokenizer(std::move(content), format_file);
+
     // parse
     Parser parser(tokenizer.getTokens(), format_file);
 
@@ -113,11 +113,21 @@ static void compressFile(const std::string& format_file)
         throw std::runtime_error("Failed to open file: " + format_file);
     }
 
-    std::string content((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
+    // std::string content((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
+    // file.close();
+    file.seekg(0, std::ios::end);
+    auto size = static_cast<size_t>(file.tellg());
+    file.seekg(0);
+    std::string content;
+    if (size) {
+        content.resize(size);
+        file.read(&content[0], static_cast<std::streamsize>(size));
+    }
     file.close();
 
     // tokenize
-    Tokenizer tokenizer(std::move(content), format_file, Tokenizer::WorkMode::compress);
+    Tokenizer<TokenizeMode::compress> tokenizer(std::move(content), format_file);
+
     // parse
     Parser parser(tokenizer.getTokens(), format_file);
 
