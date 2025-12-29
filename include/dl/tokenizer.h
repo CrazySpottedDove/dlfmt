@@ -11,8 +11,8 @@ constexpr char DL_TOKENIZER_EOF                     = '\0';
 constexpr int  INVALID_LONG_STRING_DELIMITER_LENGTH = -1;
 enum class TokenizeMode
 {
-    compress,
-    format,
+    Compress,
+    Format,
 };
 
 template<TokenizeMode mode> class Tokenizer
@@ -130,7 +130,7 @@ private:
             // Not finished yet
             //  update token_start
             token_start = position_;
-            if constexpr (mode == TokenizeMode::compress) {
+            if constexpr (mode == TokenizeMode::Compress) {
                 const char c = peek_trust_me();
 
                 // Parse comments and skip them
@@ -159,7 +159,7 @@ private:
                 if (position_ > token_start) {
                     continue;
                 }
-            }else if constexpr (mode == TokenizeMode::format){
+            }else if constexpr (mode == TokenizeMode::Format){
                 const char c = peek_trust_me();
                 const size_t comment_start_line = line_;
                 if (c == '-' && peek(1) == '-') {

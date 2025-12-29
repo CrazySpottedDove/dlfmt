@@ -50,7 +50,7 @@ static void FormatFile(const std::string& format_file)
     file.close();
 
     // tokenize
-    Tokenizer<TokenizeMode::format> tokenizer(std::move(content), format_file);
+    Tokenizer<TokenizeMode::Format> tokenizer(std::move(content), format_file);
 
     // parse
     Parser parser(tokenizer.getTokens(), format_file);
@@ -59,7 +59,8 @@ static void FormatFile(const std::string& format_file)
     std::ofstream out_file(format_file, std::ios::binary | std::ios::trunc);
 
     // 写入
-    AstTools::PrintAst(parser.GetAstRoot(), tokenizer.getCommentTokens(), out_file);
+    AstPrinter<AstPrintMode::Auto> printer(out_file, &tokenizer.getCommentTokens());
+    printer.PrintAst(parser.GetAstRoot());
     out_file.flush();
     out_file.close();
 }
@@ -126,7 +127,7 @@ static void compressFile(const std::string& format_file)
     file.close();
 
     // tokenize
-    Tokenizer<TokenizeMode::compress> tokenizer(std::move(content), format_file);
+    Tokenizer<TokenizeMode::Compress> tokenizer(std::move(content), format_file);
 
     // parse
     Parser parser(tokenizer.getTokens(), format_file);
@@ -135,7 +136,8 @@ static void compressFile(const std::string& format_file)
     std::ofstream out_file(format_file, std::ios::binary | std::ios::trunc);
 
     // 写入
-    AstTools::PrintAst(parser.GetAstRoot(), out_file);
+    AstPrinter<AstPrintMode::Compress> printer(out_file);
+    printer.PrintAst(parser.GetAstRoot());
     out_file.flush();
     out_file.close();
 }

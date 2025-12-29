@@ -14,3 +14,4 @@ node_modules/
 task.json
 vcpkg_installed/
 perf.data
+perf.data.old
