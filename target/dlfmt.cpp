@@ -66,7 +66,7 @@ static void FormatFile(const std::string& format_file)
     std::ofstream out_file(format_file, std::ios::binary | std::ios::trunc);
 
     // 写入
-    AstPrinter<AstPrintMode::Auto> printer(out_file, size, &tokenizer.getCommentTokens());
+    AstPrinter<AstPrintMode::Auto> printer(out_file, &tokenizer.getCommentTokens());
     printer.PrintAst(parser.GetAstRoot());
     out_file.flush();
     out_file.close();
@@ -141,7 +141,7 @@ static void compressFile(const std::string& format_file)
     std::ofstream out_file(format_file, std::ios::binary | std::ios::trunc);
 
     // 写入
-    AstPrinter<AstPrintMode::Compress> printer(out_file, size);
+    AstPrinter<AstPrintMode::Compress> printer(out_file);
     printer.PrintAst(parser.GetAstRoot());
     out_file.flush();
     out_file.close();

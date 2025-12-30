@@ -102,11 +102,6 @@ inline bool is_block_follow_keyword(const std::string_view str)
     return str == "else" || str == "elseif" || str == "end" || str == "until";
 }
 
-inline bool is_unop_op(const std::string_view str)
-{
-    return str == "not" || str == "-" || str == "#";
-}
-
 inline bool is_binop_op(const std::string_view str)
 {
     return str == "+" || str == "-" || str == "*" || str == "/" || str == "^" || str == "%" ||

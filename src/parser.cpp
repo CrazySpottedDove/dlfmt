@@ -44,11 +44,6 @@ bool Parser::is_block_follow() const noexcept
     return token->type_ == TokenType::Keyword && is_block_follow_keyword(token->source_);
 }
 
-bool Parser::is_unop() const noexcept
-{
-    return is_unop_op(peek()->source_);
-}
-
 bool Parser::is_binop() const noexcept
 {
     return is_binop_op(peek()->source_);

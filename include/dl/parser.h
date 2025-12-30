@@ -21,14 +21,6 @@ private:
     bool        is_block_follow() const noexcept;
 
     /**
-     * @brief 判断当前 token 是否为一元运算符
-     *
-     * @return true
-     * @return false
-     */
-    bool is_unop() const noexcept;
-
-    /**
      * @brief 判断当前 token 是否为二元运算符
      *
      * @return true
