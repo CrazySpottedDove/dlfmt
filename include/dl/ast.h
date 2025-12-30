@@ -22,7 +22,7 @@ enum class AstNodeType
     NilLiteral,
     BooleanLiteral,
     VargLiteral,
-    UnopExpr,
+    // UnopExpr,
     BinopExpr,
     CallExprStat,
     AssignmentStat,
@@ -38,7 +38,11 @@ enum class AstNodeType
     BreakStat,
     StatList,
     GotoStat,
-    LabelStat
+    LabelStat,
+    // UnopExpr types
+    NotExpr,
+    NegativeExpr,
+    LengthExpr,
 };
 
 class AstNode
@@ -446,21 +450,70 @@ public:
     Token* token_;
 };
 
-class UnopExpr : public AstNode
+// class UnopExpr : public AstNode
+// {
+// public:
+//     UnopExpr(Token* token_op, std::unique_ptr<AstNode> rhs)
+//         : token_op_(token_op)
+//         , rhs_(std::move(rhs))
+//     {}
+//     ~UnopExpr() override = default;
+//     Token*      GetFirstToken() const noexcept override { return token_op_; }
+//     Token*      GetLastToken() const noexcept override { return rhs_->GetLastToken(); }
+//     AstNodeType GetType() const noexcept override { return AstNodeType::UnopExpr; }
+
+//     Token*                   token_op_;
+//     std::unique_ptr<AstNode> rhs_;
+// };
+
+class NotExpr : public AstNode
 {
 public:
-    UnopExpr(Token* token_op, std::unique_ptr<AstNode> rhs)
+    NotExpr(Token* token_op, std::unique_ptr<AstNode> rhs)
         : token_op_(token_op)
         , rhs_(std::move(rhs))
     {}
-    ~UnopExpr() override = default;
+    ~NotExpr() override = default;
     Token*      GetFirstToken() const noexcept override { return token_op_; }
     Token*      GetLastToken() const noexcept override { return rhs_->GetLastToken(); }
-    AstNodeType GetType() const noexcept override { return AstNodeType::UnopExpr; }
+    AstNodeType GetType() const noexcept override { return AstNodeType::NotExpr; }
 
     Token*                   token_op_;
     std::unique_ptr<AstNode> rhs_;
 };
+
+class NegativeExpr : public AstNode
+{
+public:
+    NegativeExpr(Token* token_op, std::unique_ptr<AstNode> rhs)
+        : token_op_(token_op)
+        , rhs_(std::move(rhs))
+    {}
+    ~NegativeExpr() override = default;
+    Token*      GetFirstToken() const noexcept override { return token_op_; }
+    Token*      GetLastToken() const noexcept override { return rhs_->GetLastToken(); }
+    AstNodeType GetType() const noexcept override { return AstNodeType::NegativeExpr; }
+
+    Token*                   token_op_;
+    std::unique_ptr<AstNode> rhs_;
+};
+
+class LengthExpr : public AstNode
+{
+public:
+    LengthExpr(Token* token_op, std::unique_ptr<AstNode> rhs)
+        : token_op_(token_op)
+        , rhs_(std::move(rhs))
+    {}
+    ~LengthExpr() override = default;
+    Token*      GetFirstToken() const noexcept override { return token_op_; }
+    Token*      GetLastToken() const noexcept override { return rhs_->GetLastToken(); }
+    AstNodeType GetType() const noexcept override { return AstNodeType::LengthExpr; }
+
+    Token*                   token_op_;
+    std::unique_ptr<AstNode> rhs_;
+};
+
 
 class BinopExpr : public AstNode
 {

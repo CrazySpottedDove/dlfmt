@@ -372,12 +372,20 @@ std::unique_ptr<AstNode> Parser::subexpr(const size_t priority_limit)
                                                                                   {"and", 2},
                                                                                   {"or", 1}};
     std::unique_ptr<AstNode>                                  current_node;
-    if (is_unop()) {
+    const auto& op = peek()->source_;
+    if(op == "not"){
         auto operator_token = get();
         auto ex             = subexpr(UNARY_PRIORITY);
-        current_node        = std::make_unique<UnopExpr>(operator_token, std::move(ex));
-    }
-    else {
+        current_node        = std::make_unique<NotExpr>(operator_token, std::move(ex));
+    }else if(op == "-"){
+        auto operator_token = get();
+        auto ex             = subexpr(UNARY_PRIORITY);
+        current_node        = std::make_unique<NegativeExpr>(operator_token, std::move(ex));
+    }else if(op == "#"){
+        auto operator_token = get();
+        auto ex             = subexpr(UNARY_PRIORITY);
+        current_node        = std::make_unique<LengthExpr>(operator_token, std::move(ex));
+    }else {
         current_node = simpleexpr();
     }
 

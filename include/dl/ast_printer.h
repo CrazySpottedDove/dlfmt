@@ -108,12 +108,22 @@ private:
             print_expr(node->rhs_.get());
             return;
         }
-        if (type == AstNodeType::UnopExpr) {
-            auto node = static_cast<const UnopExpr*>(expr);
+        if(type == AstNodeType::NotExpr){
+            auto node = static_cast<const NotExpr*>(expr);
             print_token(node->token_op_);
-            if (node->token_op_->source_ == "not") {
-                space();
-            }
+            space();
+            print_expr(node->rhs_.get());
+            return;
+        }
+        if(type == AstNodeType::LengthExpr){
+            auto node = static_cast<const LengthExpr*>(expr);
+            print_token(node->token_op_);
+            print_expr(node->rhs_.get());
+            return;
+        }
+        if(type == AstNodeType::NegativeExpr){
+            auto node = static_cast<const NegativeExpr*>(expr);
+            print_token(node->token_op_);
             print_expr(node->rhs_.get());
             return;
         }
