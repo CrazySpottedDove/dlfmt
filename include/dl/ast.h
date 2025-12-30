@@ -807,6 +807,7 @@ public:
 	{}
 	~LocalVarStat() override = default;
 	Token* GetFirstToken() const noexcept override { return token_local_; }
+    // Seems never use
 	Token* GetLastToken() const noexcept override
 	{
 		if (!expr_list_.empty()) {

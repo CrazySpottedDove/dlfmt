@@ -11,7 +11,7 @@ find_package(OpenMP REQUIRED)
 find_package(nlohmann_json REQUIRED)
 
 add_library(dl_core STATIC
-    src/parser.cpp
+    src/parser_new.cpp
 )
 if(WIN32)
     set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -static -static-libgcc -static-libstdc++")
