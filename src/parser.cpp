@@ -361,23 +361,20 @@ AstNode* Parser::simpleexpr()
 	return primaryexpr();
 }
 
+static constexpr size_t binop_priority_1(std::string_view op)
+{
+	if (op == "+" || op == "-") return 6;
+	if (op == "*" || op == "/" || op == "%") return 7;
+	if (op == "^") return 10;
+	if (op == "..") return 5;
+	if (op == "==" || op == "~=" || op == ">" || op == "<" || op == ">=" || op == "<=") return 3;
+	if (op == "and") return 2;
+	if (op == "or") return 1;
+	return 0;
+}
+
 AstNode* Parser::subexpr(const size_t priority_limit)
 {
-	const static std::unordered_map<std::string_view, size_t> binop_priority_1 = {{"+", 6},
-																				  {"-", 6},
-																				  {"*", 7},
-																				  {"/", 7},
-																				  {"%", 7},
-																				  {"^", 10},
-																				  {"..", 5},
-																				  {"==", 3},
-																				  {"~=", 3},
-																				  {">", 3},
-																				  {"<", 3},
-																				  {">=", 3},
-																				  {"<=", 3},
-																				  {"and", 2},
-																				  {"or", 1}};
 	const static std::unordered_map<std::string_view, size_t> binop_priority_2 = {{"+", 6},
 																				  {"-", 6},
 																				  {"*", 7},
@@ -398,19 +395,16 @@ AstNode* Parser::subexpr(const size_t priority_limit)
 	if (op == "not") {
 		auto operator_token = get();
 		auto ex             = subexpr(UNARY_PRIORITY);
-		// current_node        = std::make_unique<NotExpr>(operator_token, std::move(ex));
 		current_node = ast_manager_.MakeNotExpr(ex, operator_token);
 	}
 	else if (op == "-") {
 		auto operator_token = get();
 		auto ex             = subexpr(UNARY_PRIORITY);
-		// current_node        = std::make_unique<NegativeExpr>(operator_token, std::move(ex));
 		current_node = ast_manager_.MakeNegativeExpr(ex, operator_token);
 	}
 	else if (op == "#") {
 		auto operator_token = get();
 		auto ex             = subexpr(UNARY_PRIORITY);
-		// current_node        = std::make_unique<LengthExpr>(operator_token, std::move(ex));
 		current_node = ast_manager_.MakeLengthExpr(ex, operator_token);
 	}
 	else {
@@ -419,77 +413,77 @@ AstNode* Parser::subexpr(const size_t priority_limit)
 
 	while (true) {
 		const auto& next_op = peek()->source_;
-		if (next_op == "+" && binop_priority_1.at(next_op) > priority_limit) {
+		if (next_op == "+" && binop_priority_1("+") > priority_limit) {
 			auto operator_token = get();
 			auto rhs            = subexpr(binop_priority_2.at(operator_token->source_));
 			current_node        = ast_manager_.MakeAddExpr(current_node, rhs);
 		}
-		else if (next_op == "-" && binop_priority_1.at(next_op) > priority_limit) {
+		else if (next_op == "-" && binop_priority_1("-") > priority_limit) {
 			auto operator_token = get();
 			auto rhs            = subexpr(binop_priority_2.at(operator_token->source_));
 			current_node        = ast_manager_.MakeSubExpr(current_node, rhs);
 		}
-		else if (next_op == "*" && binop_priority_1.at(next_op) > priority_limit) {
+		else if (next_op == "*" && binop_priority_1("*") > priority_limit) {
 			auto operator_token = get();
 			auto rhs            = subexpr(binop_priority_2.at(operator_token->source_));
 			current_node        = ast_manager_.MakeMulExpr(current_node, rhs);
 		}
-		else if (next_op == "/" && binop_priority_1.at(next_op) > priority_limit) {
+		else if (next_op == "/" && binop_priority_1("/") > priority_limit) {
 			auto operator_token = get();
 			auto rhs            = subexpr(binop_priority_2.at(operator_token->source_));
 			current_node        = ast_manager_.MakeDivExpr(current_node, rhs);
 		}
-		else if (next_op == "%" && binop_priority_1.at(next_op) > priority_limit) {
+		else if (next_op == "%" && binop_priority_1("%") > priority_limit) {
 			auto operator_token = get();
 			auto rhs            = subexpr(binop_priority_2.at(operator_token->source_));
 			current_node        = ast_manager_.MakeModExpr(current_node, rhs);
 		}
-		else if (next_op == "^" && binop_priority_1.at(next_op) > priority_limit) {
+		else if (next_op == "^" && binop_priority_1("^") > priority_limit) {
 			auto operator_token = get();
 			auto rhs            = subexpr(binop_priority_2.at(operator_token->source_));
 			current_node        = ast_manager_.MakePowExpr(current_node, rhs);
 		}
-		else if (next_op == ".." && binop_priority_1.at(next_op) > priority_limit) {
+		else if (next_op == ".." && binop_priority_1("..") > priority_limit) {
 			auto operator_token = get();
 			auto rhs            = subexpr(binop_priority_2.at(operator_token->source_));
 			current_node        = ast_manager_.MakeConcatExpr(current_node, rhs);
 		}
-		else if (next_op == "==" && binop_priority_1.at(next_op) > priority_limit) {
+		else if (next_op == "==" && binop_priority_1("==") > priority_limit) {
 			auto operator_token = get();
 			auto rhs            = subexpr(binop_priority_2.at(operator_token->source_));
 			current_node        = ast_manager_.MakeEqExpr(current_node, rhs);
 		}
-		else if (next_op == "~=" && binop_priority_1.at(next_op) > priority_limit) {
+		else if (next_op == "~=" && binop_priority_1("~=") > priority_limit) {
 			auto operator_token = get();
 			auto rhs            = subexpr(binop_priority_2.at(operator_token->source_));
 			current_node        = ast_manager_.MakeNeqExpr(current_node, rhs);
 		}
-		else if (next_op == ">" && binop_priority_1.at(next_op) > priority_limit) {
+		else if (next_op == ">" && binop_priority_1(">") > priority_limit) {
 			auto operator_token = get();
 			auto rhs            = subexpr(binop_priority_2.at(operator_token->source_));
 			current_node        = ast_manager_.MakeGtExpr(current_node, rhs);
 		}
-		else if (next_op == "<" && binop_priority_1.at(next_op) > priority_limit) {
+		else if (next_op == "<" && binop_priority_1("<") > priority_limit) {
 			auto operator_token = get();
 			auto rhs            = subexpr(binop_priority_2.at(operator_token->source_));
 			current_node        = ast_manager_.MakeLtExpr(current_node, rhs);
 		}
-		else if (next_op == ">=" && binop_priority_1.at(next_op) > priority_limit) {
+		else if (next_op == ">=" && binop_priority_1(">=") > priority_limit) {
 			auto operator_token = get();
 			auto rhs            = subexpr(binop_priority_2.at(operator_token->source_));
 			current_node        = ast_manager_.MakeGeExpr(current_node, rhs);
 		}
-		else if (next_op == "<=" && binop_priority_1.at(next_op) > priority_limit) {
+		else if (next_op == "<=" && binop_priority_1("<=") > priority_limit) {
 			auto operator_token = get();
 			auto rhs            = subexpr(binop_priority_2.at(operator_token->source_));
 			current_node        = ast_manager_.MakeLeExpr(current_node, rhs);
 		}
-		else if (next_op == "and" && binop_priority_1.at(next_op) > priority_limit) {
+		else if (next_op == "and" && binop_priority_1("and") > priority_limit) {
 			auto operator_token = get();
 			auto rhs            = subexpr(binop_priority_2.at(operator_token->source_));
 			current_node        = ast_manager_.MakeAndExpr(current_node, rhs);
 		}
-		else if (next_op == "or" && binop_priority_1.at(next_op) > priority_limit) {
+		else if (next_op == "or" && binop_priority_1("or") > priority_limit) {
 			auto operator_token = get();
 			auto rhs            = subexpr(binop_priority_2.at(operator_token->source_));
 			current_node        = ast_manager_.MakeOrExpr(current_node, rhs);

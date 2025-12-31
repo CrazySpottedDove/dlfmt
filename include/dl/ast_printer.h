@@ -21,7 +21,7 @@ public:
 		, indent_(0)
 	{}
 
-	void PrintAst(const AstNode* ast)
+	void PrintAst(const AstNode* ast) noexcept
 	{
 		print_stat(ast);
 		if constexpr (mode != AstPrintMode::Compress) {
@@ -50,7 +50,7 @@ private:
 		Call,
 		Goto
 	};
-	void print_token(const Token* token)
+	void print_token(const Token* token) noexcept
 	{
 		if constexpr (mode == AstPrintMode::Compress) {
 			append(token->source_);
@@ -79,193 +79,158 @@ private:
 			append(token->source_);
 		}
 	}
-	void print_expr(const AstNode* expr)
+	void print_expr(const AstNode* expr) noexcept
 	{
 		const auto type = expr->type_;
 		if (type == AstNodeType::AddExpr) {
+			print_expr(expr->add_expr_.lhs_);
 			if constexpr (mode == AstPrintMode::Compress) {
-				print_expr(expr->add_expr_.lhs_);
 				append('+');
 			}
 			else if constexpr (mode == AstPrintMode::Auto) {
-				print_expr(expr->add_expr_.lhs_);
-				space();
-				append('+');
-				space();
+				append(" + ");
 			}
 			print_expr(expr->add_expr_.rhs_);
 		}
 		else if (type == AstNodeType::SubExpr) {
+			print_expr(expr->sub_expr_.lhs_);
 			if constexpr (mode == AstPrintMode::Compress) {
-				print_expr(expr->sub_expr_.lhs_);
 				append('-');
 			}
 			else if constexpr (mode == AstPrintMode::Auto) {
-				print_expr(expr->sub_expr_.lhs_);
-				space();
-				append('-');
-				space();
+				append(" - ");
 			}
 			print_expr(expr->sub_expr_.rhs_);
 		}
 		else if (type == AstNodeType::MulExpr) {
+			print_expr(expr->mul_expr_.lhs_);
 			if constexpr (mode == AstPrintMode::Compress) {
-				print_expr(expr->mul_expr_.lhs_);
 				append('*');
 			}
 			else if constexpr (mode == AstPrintMode::Auto) {
-				print_expr(expr->mul_expr_.lhs_);
-				space();
-				append('*');
-				space();
+				append(" * ");
 			}
 			print_expr(expr->mul_expr_.rhs_);
 		}
 		else if (type == AstNodeType::DivExpr) {
+			print_expr(expr->div_expr_.lhs_);
+
 			if constexpr (mode == AstPrintMode::Compress) {
-				print_expr(expr->div_expr_.lhs_);
 				append('/');
 			}
 			else if constexpr (mode == AstPrintMode::Auto) {
-				print_expr(expr->div_expr_.lhs_);
-				space();
-				append('/');
-				space();
+				append(" / ");
 			}
 			print_expr(expr->div_expr_.rhs_);
 		}
 		else if (type == AstNodeType::ModExpr) {
+			print_expr(expr->mod_expr_.lhs_);
+
 			if constexpr (mode == AstPrintMode::Compress) {
-				print_expr(expr->mod_expr_.lhs_);
 				append('%');
 			}
 			else if constexpr (mode == AstPrintMode::Auto) {
-				print_expr(expr->mod_expr_.lhs_);
-				space();
-				append('%');
-
-				space();
+				append(" % ");
 			}
 			print_expr(expr->mod_expr_.rhs_);
 		}
 		else if (type == AstNodeType::PowExpr) {
+			print_expr(expr->pow_expr_.lhs_);
+
 			if constexpr (mode == AstPrintMode::Compress) {
-				print_expr(expr->pow_expr_.lhs_);
 				append('^');
 			}
 			else if constexpr (mode == AstPrintMode::Auto) {
-				print_expr(expr->pow_expr_.lhs_);
-				space();
-				append('^');
-				space();
+				append(" ^ ");
 			}
 			print_expr(expr->pow_expr_.rhs_);
 		}
 		else if (type == AstNodeType::ConcatExpr) {
+			print_expr(expr->concat_expr_.lhs_);
 			if constexpr (mode == AstPrintMode::Compress) {
-				print_expr(expr->concat_expr_.lhs_);
 				append("..");
 			}
 			else if constexpr (mode == AstPrintMode::Auto) {
-				print_expr(expr->concat_expr_.lhs_);
-				space();
-				append("..");
-				space();
+				append(" .. ");
 			}
 			print_expr(expr->concat_expr_.rhs_);
 		}
 		else if (type == AstNodeType::EqExpr) {
+			print_expr(expr->eq_expr_.lhs_);
 			if constexpr (mode == AstPrintMode::Compress) {
-				print_expr(expr->eq_expr_.lhs_);
 				append("==");
 			}
 			else if constexpr (mode == AstPrintMode::Auto) {
-				print_expr(expr->eq_expr_.lhs_);
-				space();
-				append("==");
-				space();
+				append(" == ");
 			}
 			print_expr(expr->eq_expr_.rhs_);
 		}
 		else if (type == AstNodeType::NeqExpr) {
+			print_expr(expr->neq_expr_.lhs_);
+
 			if constexpr (mode == AstPrintMode::Compress) {
-				print_expr(expr->neq_expr_.lhs_);
 				append("~=");
 			}
 			else if constexpr (mode == AstPrintMode::Auto) {
-				print_expr(expr->neq_expr_.lhs_);
-
-				space();
-				append("~=");
-				space();
+				append(" ~= ");
 			}
 			print_expr(expr->neq_expr_.rhs_);
 		}
 		else if (type == AstNodeType::LtExpr) {
-			if constexpr (mode == AstPrintMode::Compress) {
-				print_expr(expr->lt_expr_.lhs_);
+			print_expr(expr->lt_expr_.lhs_);
 
+			if constexpr (mode == AstPrintMode::Compress) {
 				append('<');
 			}
 			else if constexpr (mode == AstPrintMode::Auto) {
-				print_expr(expr->lt_expr_.lhs_);
-				space();
-				append('<');
-				space();
+				append(" < ");
 			}
 			print_expr(expr->lt_expr_.rhs_);
 		}
 		else if (type == AstNodeType::LeExpr) {
+			print_expr(expr->le_expr_.lhs_);
+
 			if constexpr (mode == AstPrintMode::Compress) {
-				print_expr(expr->le_expr_.lhs_);
 				append("<=");
 			}
 			else if constexpr (mode == AstPrintMode::Auto) {
-				print_expr(expr->le_expr_.lhs_);
-				space();
-				append("<=");
-				space();
+
+
+
+				append(" <= ");
 			}
 			print_expr(expr->le_expr_.rhs_);
 		}
 		else if (type == AstNodeType::GtExpr) {
+			print_expr(expr->gt_expr_.lhs_);
+
 			if constexpr (mode == AstPrintMode::Compress) {
-				print_expr(expr->gt_expr_.lhs_);
 				append('>');
 			}
 			else if constexpr (mode == AstPrintMode::Auto) {
-				print_expr(expr->gt_expr_.lhs_);
-				space();
-				append('>');
-				space();
+                append(" > ");
 			}
 			print_expr(expr->gt_expr_.rhs_);
 		}
 		else if (type == AstNodeType::GeExpr) {
+			print_expr(expr->ge_expr_.lhs_);
+
 			if constexpr (mode == AstPrintMode::Compress) {
-				print_expr(expr->ge_expr_.lhs_);
 				append(">=");
 			}
 			else if constexpr (mode == AstPrintMode::Auto) {
-				print_expr(expr->ge_expr_.lhs_);
-				space();
-				append(">=");
-				space();
+                append(" >= ");
 			}
 			print_expr(expr->ge_expr_.rhs_);
 		}
 		else if (type == AstNodeType::AndExpr) {
 			print_expr(expr->and_expr_.lhs_);
-			space();
-			append("and");
-			space();
+            append(" and ");
 			print_expr(expr->and_expr_.rhs_);
 		}
 		else if (type == AstNodeType::OrExpr) {
 			print_expr(expr->or_expr_.lhs_);
-			space();
-			append("or");
-			space();
+            append(" or ");
 			print_expr(expr->or_expr_.rhs_);
 		}
 		else if (type == AstNodeType::NotExpr) {
@@ -440,8 +405,7 @@ private:
 							print_expr(value_entry.value_);
 							// Other entry type UNREACHABLE
 							if (i < node.entry_list_.size() - 1) {
-								append(',');
-								space();
+								append(", ");
 							}
 						}
 					}
@@ -455,19 +419,14 @@ private:
 							if (entry_type == AstNode::TableEntryType::Field) {
 								auto& field_entry = entry.field_entry_;
 								print_token(field_entry.field_);
-								space();
-								append('=');
-								space();
+                                append(" = ");
 								print_expr(field_entry.value_);
 							}
 							else if (entry_type == AstNode::TableEntryType::Index) {
 								auto& index_entry = entry.index_entry_;
 								append('[');
 								print_expr(index_entry.index_);
-								append(']');
-								space();
-								append('=');
-								space();
+                                append("] = ");
 								print_expr(index_entry.value_);
 							}
 							else if (entry_type == AstNode::TableEntryType::Value) {
@@ -488,7 +447,7 @@ private:
 			append('}');
 		}
 	}
-	void print_stat(const AstNode* stat)
+	void print_stat(const AstNode* stat) noexcept
 	{
 		if (stat->type_ == AstNodeType::StatList) {
 			auto& node = stat->stat_list_;
@@ -514,8 +473,7 @@ private:
 				for (size_t i = 0; i < node.expr_list_.size(); ++i) {
 					print_expr(node.expr_list_[i]);
 					if (i < node.expr_list_.size() - 1) {
-						append(',');
-						space();
+                        append(", ");
 					}
 				}
 			}
@@ -535,9 +493,7 @@ private:
 			}
 			if (node.expr_list_.size() > 0) {
 				if constexpr (mode != AstPrintMode::Compress) {
-					space();
-					append('=');
-					space();
+                    append(" = ");
 				}
 				else {
 					append('=');
@@ -660,9 +616,7 @@ private:
 				}
 			}
 			if constexpr (mode != AstPrintMode::Compress) {
-				space();
-				append('=');
-				space();
+				append(" = ");
 			}
 			else {
 				append('=');
@@ -688,8 +642,7 @@ private:
 			print_token(stat->first_token_);
 			space();
 			print_expr(node.condition_);
-			space();
-			append("do");
+			append(" do");
 			enter_group();
 			print_stat(node.body_);
 			exit_group();
@@ -708,8 +661,7 @@ private:
 			print_token(stat->first_token_);
 			space();
 			print_expr(node.condition_);
-			space();
-			append("then");
+			append(" then");
 			enter_group();
 			print_stat(node.body_);
 			exit_group();
@@ -719,8 +671,7 @@ private:
 				if (clause.type_ == AstNode::ElseClauseType::ElseIfClause) {
 					space();
 					print_expr(clause.else_if_clause_.condition_);
-					space();
-					append("then");
+					append(" then");
 				}
 				enter_group();
 				print_stat(clause.body_);
@@ -743,9 +694,7 @@ private:
 				}
 			}
 			if constexpr (mode != AstPrintMode::Compress) {
-				space();
-				append('=');
-				space();
+				append(" = ");
 			}
 			else {
 				append('=');
@@ -827,15 +776,23 @@ private:
 		default: return FormatStatGroup::None;
 		}
 	}
-	const CommentToken* comment_token() { return &(*comment_tokens_)[comment_index_]; }
-	void                indent()
+	const CommentToken* comment_token() const noexcept { return &(*comment_tokens_)[comment_index_]; }
+
+    /**
+     * @brief Simply I don't think indent would exceed 32 in normal use
+     *
+     */
+	void                indent() noexcept
 	{
-		for (int i = 0; i < indent_; ++i) {
-			append('\t');
-		}
+		// for (int i = 0; i < indent_; ++i) {
+			// append('\t');
+		// }
+        static constexpr int MAX_INDENT = 32;
+        static constexpr char tabs[MAX_INDENT] = "\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t";
+        append(tabs, indent_);
 	}
-	void space() { append(' '); }
-	void breakline()
+	void space() noexcept{ append(' '); }
+	void breakline() noexcept
 	{
 		if constexpr (mode == AstPrintMode::Compress) {
 			append('\n');
@@ -855,7 +812,7 @@ private:
 		}
 	}
 
-	bool is_block_stat(AstNodeType type)
+	bool is_block_stat(AstNodeType type) const noexcept
 	{
 		switch (type) {
 		case AstNodeType::LocalFunctionStat:
@@ -869,18 +826,18 @@ private:
 		default: return false;
 		}
 	}
-	void inc_indent()
+	void inc_indent() noexcept
 	{
 		++indent_;
 		is_block_start_ = true;
 	}
-	void dec_indent()
+	void dec_indent() noexcept
 	{
 		--indent_;
 		is_block_start_ = false;
 	}
 
-	void enter_group()
+	void enter_group() noexcept
 	{
 		breakline();
 		if constexpr (mode != AstPrintMode::Compress) {
@@ -889,7 +846,7 @@ private:
 		}
 	}
 
-	void exit_group()
+	void exit_group() noexcept
 	{
 		if constexpr (mode != AstPrintMode::Compress) {
 			--indent_;
