@@ -66,7 +66,7 @@ private:
 	 * @param expr_list
 	 * @param comma_list
 	 */
-	void exprlist(std::vector<AstNode*>& expr_list, std::vector<Token*>& comma_list);
+	void exprlist(std::vector<AstNode*>& expr_list);
 	/**
 	 * @brief 解析前缀表达式
 	 * @details (expr) 或 identifier
@@ -90,7 +90,7 @@ private:
 	 * @param var_list
 	 * @param comma_list
 	 */
-	void varlist(std::vector<Token*>& var_list, std::vector<Token*>& comma_list);
+	void varlist(std::vector<Token*>& var_list);
 
 	/**
 	 * @brief 解析代码块主体

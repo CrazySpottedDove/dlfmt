@@ -1,8 +1,10 @@
 #pragma once
 #include "dl/ast.h"
 #include "dl/token.h"
+#include <cassert>
 #include <cstring>
 #include <ostream>
+#include <spdlog/spdlog.h>
 
 namespace dl {
 
@@ -34,7 +36,6 @@ public:
 			}
 		}
 		flush();
-		buffer_pos_ = 0;
 	}
 
 private:
@@ -194,9 +195,6 @@ private:
 				append("<=");
 			}
 			else if constexpr (mode == AstPrintMode::Auto) {
-
-
-
 				append(" <= ");
 			}
 			print_expr(expr->le_expr_.rhs_);
@@ -274,11 +272,11 @@ private:
 				print_token(function_args->first_token_);
 			}
 			else if (call_type == AstNodeType::ArgCall) {
-				auto& arg_call = function_args->arg_call_;
+				const auto& arg_list = *function_args->arg_call_.arg_list_;
 				append('(');
-				for (size_t i = 0; i < arg_call.arg_list_.size(); ++i) {
-					print_expr(arg_call.arg_list_[i]);
-					if (i < arg_call.arg_list_.size() - 1) {
+				for (size_t i = 0; i < arg_list.size(); ++i) {
+					print_expr(arg_list[i]);
+					if (i < arg_list.size() - 1) {
 						append(',');
 						if constexpr (mode != AstPrintMode::Compress) {
 							space();
@@ -301,11 +299,11 @@ private:
 				print_token(function_args->first_token_);
 			}
 			else if (call_type == AstNodeType::ArgCall) {
-				auto& arg_call = function_args->arg_call_;
+				const auto& arg_list = *function_args->arg_call_.arg_list_;
 				append('(');
-				for (size_t i = 0; i < arg_call.arg_list_.size(); ++i) {
-					print_expr(arg_call.arg_list_[i]);
-					if (i < arg_call.arg_list_.size() - 1) {
+				for (size_t i = 0; i < arg_list.size(); ++i) {
+					print_expr(arg_list[i]);
+					if (i < arg_list.size() - 1) {
 						append(',');
 						if constexpr (mode != AstPrintMode::Compress) {
 							space();
@@ -322,9 +320,10 @@ private:
 			auto& node = expr->function_literal_;
 			print_token(expr->first_token_);
 			append('(');
-			for (size_t i = 0; i < node.arg_list_.size(); ++i) {
-				print_token(node.arg_list_[i]);
-				if (i < node.arg_list_.size() - 1) {
+			const auto& arg_list = *node.arg_list_;
+			for (size_t i = 0; i < arg_list.size(); ++i) {
+				print_token(arg_list[i]);
+				if (i < arg_list.size() - 1) {
 					append(',');
 					if constexpr (mode != AstPrintMode::Compress) {
 						space();
@@ -446,8 +445,8 @@ private:
 	void print_stat(const AstNode* stat) noexcept
 	{
 		if (stat->type_ == AstNodeType::StatList) {
-			auto& node = stat->stat_list_;
-			for (auto& stat : node.statement_list_) {
+			const auto& statement_list = *stat->stat_list_.statement_list_;
+			for (const auto& stat : statement_list) {
 				print_stat(stat);
 			}
 			return;
@@ -464,11 +463,12 @@ private:
 		else if (stat->type_ == AstNodeType::ReturnStat) {
 			auto& node = stat->return_stat_;
 			print_token(stat->first_token_);
-			if (!node.expr_list_.empty()) {
+			const auto& expr_list = *node.expr_list_;
+			if (!expr_list.empty()) {
 				space();
-				for (size_t i = 0; i < node.expr_list_.size(); ++i) {
-					print_expr(node.expr_list_[i]);
-					if (i < node.expr_list_.size() - 1) {
+				for (size_t i = 0; i < expr_list.size(); ++i) {
+					print_expr(expr_list[i]);
+					if (i < expr_list.size() - 1) {
 						append(", ");
 					}
 				}
@@ -478,25 +478,27 @@ private:
 			auto& node = stat->local_var_stat_;
 			print_token(stat->first_token_);
 			space();
-			for (size_t i = 0; i < node.var_list_.size(); ++i) {
-				print_token(node.var_list_[i]);
-				if (i < node.var_list_.size() - 1) {
+			auto& var_list = *node.var_list_;
+			for (size_t i = 0; i < var_list.size(); ++i) {
+				print_token(var_list[i]);
+				if (i < var_list.size() - 1) {
 					append(',');
 					if constexpr (mode != AstPrintMode::Compress) {
 						space();
 					}
 				}
 			}
-			if (node.expr_list_.size() > 0) {
+			const auto& expr_list = *node.expr_list_;
+			if (expr_list.size() > 0) {
 				if constexpr (mode != AstPrintMode::Compress) {
 					append(" = ");
 				}
 				else {
 					append('=');
 				}
-				for (size_t i = 0; i < node.expr_list_.size(); ++i) {
-					print_expr(node.expr_list_[i]);
-					if (i < node.expr_list_.size() - 1) {
+				for (size_t i = 0; i < expr_list.size(); ++i) {
+					print_expr(expr_list[i]);
+					if (i < expr_list.size() - 1) {
 						append(',');
 						if constexpr (mode != AstPrintMode::Compress) {
 							space();
@@ -513,11 +515,12 @@ private:
 			print_token(function_node->first_token_);
 			space();
 			auto& function_stat = function_node->function_stat_;
-			print_token(function_stat.name_chain_[0]);
+			print_token((*function_stat.name_chain_)[0]);
 			append('(');
-			for (size_t i = 0; i < function_stat.arg_list_.size(); ++i) {
-				print_token(function_stat.arg_list_[i]);
-				if (i < function_stat.arg_list_.size() - 1) {
+			const auto& arg_list = *function_stat.arg_list_;
+			for (size_t i = 0; i < arg_list.size(); ++i) {
+				print_token(arg_list[i]);
+				if (i < arg_list.size() - 1) {
 					append(',');
 					if constexpr (mode != AstPrintMode::Compress) {
 						space();
@@ -534,10 +537,11 @@ private:
 			auto& function_stat = stat->function_stat_;
 			print_token(stat->first_token_);
 			space();
-			for (size_t i = 0; i < function_stat.name_chain_.size(); ++i) {
-				print_token(function_stat.name_chain_[i]);
-				if (i < function_stat.name_chain_.size() - 1) {
-					if (function_stat.is_method_ && i == function_stat.name_chain_.size() - 2) {
+			auto& name_chain = *function_stat.name_chain_;
+			for (size_t i = 0; i < name_chain.size(); ++i) {
+				print_token(name_chain[i]);
+				if (i < name_chain.size() - 1) {
+					if (function_stat.is_method_ && i == name_chain.size() - 2) {
 						append(':');
 					}
 					else {
@@ -546,9 +550,10 @@ private:
 				}
 			}
 			append('(');
-			for (size_t i = 0; i < function_stat.arg_list_.size(); ++i) {
-				print_token(function_stat.arg_list_[i]);
-				if (i < function_stat.arg_list_.size() - 1) {
+			auto& arg_list = *function_stat.arg_list_;
+			for (size_t i = 0; i < arg_list.size(); ++i) {
+				print_token(arg_list[i]);
+				if (i < arg_list.size() - 1) {
 					append(',');
 					if constexpr (mode != AstPrintMode::Compress) {
 						space();
@@ -575,30 +580,29 @@ private:
 			auto& node = stat->generic_for_stat_;
 			print_token(stat->first_token_);
 			space();
-			for (size_t i = 0; i < node.var_list_.size(); ++i) {
-				print_token(node.var_list_[i]);
-				if (i < node.var_list_.size() - 1) {
+			const auto& var_list = *node.var_list_;
+			for (size_t i = 0; i < var_list.size(); ++i) {
+				print_token(var_list[i]);
+				if (i < var_list.size() - 1) {
 					append(',');
 					if constexpr (mode != AstPrintMode::Compress) {
 						space();
 					}
 				}
 			}
-			space();
-			append("in");
-			space();
-			for (size_t i = 0; i < node.generator_list_.size(); ++i) {
-				print_expr(node.generator_list_[i]);
-				if (i < node.generator_list_.size() - 1) {
+			append(" in ");
+			const auto& generator_list = *node.generator_list_;
+			for (size_t i = 0; i < generator_list.size(); ++i) {
+				print_expr(generator_list[i]);
+				if (i < generator_list.size() - 1) {
 					append(',');
 					if constexpr (mode != AstPrintMode::Compress) {
 						space();
 					}
 				}
 			}
-			space();
-			append("do");
-			enter_group();
+			append(" do ");
+            enter_group();
 			print_stat(node.body_);
 			exit_group();
 			print_token(node.end_token_);
@@ -607,9 +611,10 @@ private:
 			auto& node = stat->numeric_for_stat_;
 			print_token(stat->first_token_);
 			space();
-			for (size_t i = 0; i < node.var_list_.size(); ++i) {
-				print_token(node.var_list_[i]);
-				if (i < node.var_list_.size() - 1) {
+			const auto& var_list = *node.var_list_;
+			for (size_t i = 0; i < var_list.size(); ++i) {
+				print_token(var_list[i]);
+				if (i < var_list.size() - 1) {
 					append(',');
 					if constexpr (mode != AstPrintMode::Compress) {
 						space();
@@ -622,17 +627,17 @@ private:
 			else {
 				append('=');
 			}
-			for (size_t i = 0; i < node.range_list_.size(); ++i) {
-				print_expr(node.range_list_[i]);
-				if (i < node.range_list_.size() - 1) {
+			const auto& range_list = *node.range_list_;
+			for (size_t i = 0; i < range_list.size(); ++i) {
+				print_expr(range_list[i]);
+				if (i < range_list.size() - 1) {
 					append(',');
 					if constexpr (mode != AstPrintMode::Compress) {
 						space();
 					}
 				}
 			}
-			space();
-			append("do");
+			append(" do");
 			enter_group();
 			print_stat(node.body_);
 			exit_group();
@@ -666,8 +671,9 @@ private:
 			enter_group();
 			print_stat(node.body_);
 			exit_group();
-			for (size_t i = 0; i < node.else_clauses_.size(); ++i) {
-				auto& clause = node.else_clauses_[i];
+			const auto& else_clauses = *node.else_clauses_;
+			for (size_t i = 0; i < else_clauses.size(); ++i) {
+				auto& clause = else_clauses[i];
 				print_token(clause.else_token_);
 				if (clause.type_ == AstNode::ElseClauseType::ElseIfClause) {
 					space();
@@ -684,10 +690,11 @@ private:
 			print_expr(stat->call_expr_stat_.expression_);
 		}
 		else if (stat->type_ == AstNodeType::AssignmentStat) {
-			auto& node = stat->assignment_stat_;
-			for (size_t i = 0; i < node.lhs_.size(); ++i) {
-				print_expr(node.lhs_[i]);
-				if (i < node.lhs_.size() - 1) {
+			auto&       node = stat->assignment_stat_;
+			const auto& lhs  = *node.lhs_;
+			for (size_t i = 0; i < lhs.size(); ++i) {
+				print_expr(lhs[i]);
+				if (i < lhs.size() - 1) {
 					append(',');
 					if constexpr (mode != AstPrintMode::Compress) {
 						space();
@@ -700,9 +707,10 @@ private:
 			else {
 				append('=');
 			}
-			for (size_t i = 0; i < node.rhs_.size(); ++i) {
-				print_expr(node.rhs_[i]);
-				if (i < node.rhs_.size() - 1) {
+			const auto& rhs = *node.rhs_;
+			for (size_t i = 0; i < rhs.size(); ++i) {
+				print_expr(rhs[i]);
+				if (i < rhs.size() - 1) {
 					append(',');
 					if constexpr (mode != AstPrintMode::Compress) {
 						space();
@@ -788,9 +796,6 @@ private:
 	 */
 	void indent() noexcept
 	{
-		// for (int i = 0; i < indent_; ++i) {
-		// append('\t');
-		// }
 		static constexpr int  MAX_INDENT = 32;
 		static constexpr char tabs[MAX_INDENT] =
 			"\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t";

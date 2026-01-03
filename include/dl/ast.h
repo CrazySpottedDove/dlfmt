@@ -139,15 +139,15 @@ public:
 
 	struct FunctionLiteral
 	{
-		std::vector<Token*> arg_list_;
+		std::vector<Token*>* arg_list_;
 		AstNode*            body_;
 		Token*              end_token_;
 	};
 
 	struct FunctionStat
 	{
-		std::vector<Token*> name_chain_;
-		std::vector<Token*> arg_list_;
+		std::vector<Token*>* name_chain_;
+		std::vector<Token*>* arg_list_;
 		AstNode*            body_;
 		Token*              end_token_;
 		bool                is_method_;
@@ -155,7 +155,7 @@ public:
 
 	struct ArgCall
 	{
-		std::vector<AstNode*> arg_list_;
+		std::vector<AstNode*>* arg_list_;
 	};
 
 	struct TableCall
@@ -318,8 +318,8 @@ public:
 
 	struct AssignmentStat
 	{
-		std::vector<AstNode*> lhs_;
-		std::vector<AstNode*> rhs_;
+		std::vector<AstNode*>* lhs_;
+		std::vector<AstNode*>* rhs_;
 	};
 	enum class ElseClauseType
 	{
@@ -361,7 +361,7 @@ public:
 		};
 		AstNode*                       condition_;
 		AstNode*                       body_;
-		std::vector<GeneralElseClause> else_clauses_;
+		std::vector<GeneralElseClause>* else_clauses_;
 		Token*                         end_token_;
 	};
 
@@ -380,16 +380,16 @@ public:
 
 	struct NumericForStat
 	{
-		std::vector<Token*>   var_list_;
-		std::vector<AstNode*> range_list_;
+		std::vector<Token*>*   var_list_;
+		std::vector<AstNode*>* range_list_;
 		AstNode*              body_;
 		Token*                end_token_;
 	};
 
 	struct GenericForStat
 	{
-		std::vector<Token*>   var_list_;
-		std::vector<AstNode*> generator_list_;
+		std::vector<Token*>*   var_list_;
+		std::vector<AstNode*>* generator_list_;
 		AstNode*              body_;
 		Token*                end_token_;
 	};
@@ -408,20 +408,20 @@ public:
 
 	struct LocalVarStat
 	{
-		std::vector<Token*>   var_list_;
-		std::vector<AstNode*> expr_list_;
+		std::vector<Token*>*   var_list_;
+		std::vector<AstNode*>* expr_list_;
 	};
 
 	struct ReturnStat
 	{
-		std::vector<AstNode*> expr_list_;
+		std::vector<AstNode*>* expr_list_;
 	};
 
 	struct BreakStat
 	{};
 	struct StatList
 	{
-		std::vector<AstNode*> statement_list_;
+		std::vector<AstNode*>* statement_list_;
 	};
 
 	struct GotoStat
@@ -795,16 +795,16 @@ public:
 	{
 		switch (type_) {
 		case AstNodeType::TableLiteral: table_literal_.~TableLiteral(); break;
-		case AstNodeType::FunctionLiteral: function_literal_.~FunctionLiteral(); break;
-		case AstNodeType::FunctionStat: function_stat_.~FunctionStat(); break;
-		case AstNodeType::ArgCall: arg_call_.~ArgCall(); break;
-		case AstNodeType::AssignmentStat: assignment_stat_.~AssignmentStat(); break;
-		case AstNodeType::IfStat: if_stat_.~IfStat(); break;
-		case AstNodeType::NumericForStat: numeric_for_stat_.~NumericForStat(); break;
-		case AstNodeType::GenericForStat: generic_for_stat_.~GenericForStat(); break;
-		case AstNodeType::LocalVarStat: local_var_stat_.~LocalVarStat(); break;
-		case AstNodeType::ReturnStat: return_stat_.~ReturnStat(); break;
-		case AstNodeType::StatList: stat_list_.~StatList(); break;
+		// case AstNodeType::FunctionLiteral: function_literal_.~FunctionLiteral(); break;
+		// case AstNodeType::FunctionStat: function_stat_.~FunctionStat(); break;
+		// case AstNodeType::ArgCall: arg_call_.~ArgCall(); break;
+		// case AstNodeType::AssignmentStat: assignment_stat_.~AssignmentStat(); break;
+		// case AstNodeType::IfStat: if_stat_.~IfStat(); break;
+		// case AstNodeType::NumericForStat: numeric_for_stat_.~NumericForStat(); break;
+		// case AstNodeType::GenericForStat: generic_for_stat_.~GenericForStat(); break;
+		// case AstNodeType::LocalVarStat: local_var_stat_.~LocalVarStat(); break;
+		// case AstNodeType::ReturnStat: return_stat_.~ReturnStat(); break;
+		// case AstNodeType::StatList: stat_list_.~StatList(); break;
 		default: break;
 		}
 	}

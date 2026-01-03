@@ -13,7 +13,7 @@ template<typename T, size_t BlockSize = 1024> class Arena
 {
 public:
 	Arena()  = default;
-	~Arena() = default;
+	~Arena(){ clear(); };
 
 	// Non-copyable, movable.
 	Arena(const Arena&)                = delete;
@@ -54,8 +54,8 @@ public:
 		size_      = 0;
 	}
 
-	size_t size() const { return size_; }
-	bool   empty() const { return size_ == 0; }
+	// size_t size() const { return size_; }
+	// bool   empty() const { return size_ == 0; }
 
 private:
 	// A block of uninitialized storage for BlockSize objects of type T.
