@@ -149,6 +149,7 @@ public:
 		std::vector<Token*> arg_list_;
 		AstNode*            body_;
 		Token*              end_token_;
+		bool                is_method_;
 	};
 
 	struct ArgCall
@@ -343,14 +344,14 @@ public:
 			AstNode*       body_;
 			ElseClauseType type_;
 			GeneralElseClause(ElseIfClause&& v, AstNode* body, Token* else_token)
-                : else_token_(else_token)
+				: else_token_(else_token)
 				, body_(body)
 				, type_(ElseClauseType::ElseIfClause)
 			{
 				new (&else_if_clause_) ElseIfClause(std::move(v));
 			}
 			GeneralElseClause(ElseClause&& v, AstNode* body, Token* else_token)
-                : else_token_(else_token)
+				: else_token_(else_token)
 				, body_(body)
 				, type_(ElseClauseType::ElseClause)
 			{
@@ -366,14 +367,14 @@ public:
 	struct DoStat
 	{
 		AstNode* body_;
-        Token* end_token_;
+		Token*   end_token_;
 	};
 
 	struct WhileStat
 	{
 		AstNode* condition_;
 		AstNode* body_;
-        Token* end_token_;
+		Token*   end_token_;
 	};
 
 	struct NumericForStat
@@ -381,7 +382,7 @@ public:
 		std::vector<Token*>   var_list_;
 		std::vector<AstNode*> range_list_;
 		AstNode*              body_;
-        Token* end_token_;
+		Token*                end_token_;
 	};
 
 	struct GenericForStat
@@ -389,13 +390,13 @@ public:
 		std::vector<Token*>   var_list_;
 		std::vector<AstNode*> generator_list_;
 		AstNode*              body_;
-        Token* end_token_;
+		Token*                end_token_;
 	};
 
 	struct RepeatStat
 	{
 		AstNode* body_;
-        Token* until_token_;
+		Token*   until_token_;
 		AstNode* condition_;
 	};
 

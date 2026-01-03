@@ -243,15 +243,19 @@ AstNode* Parser::funcdecl_named()
 {
 	auto                function_keyword = get();
 	std::vector<Token*> name_chain;
-	std::vector<Token*> name_chain_separator;
+	// std::vector<Token*> name_chain_separator;
 	name_chain.push_back(expect(TokenType::Identifier));
+    bool is_method = false;
 	while (peek()->source_ == ".") {
-		name_chain_separator.push_back(get());
+		// name_chain_separator.push_back(get());
+        step();
 		name_chain.push_back(expect(TokenType::Identifier));
 	}
 	if (peek()->source_ == ":") {
-		name_chain_separator.push_back(get());
+		// name_chain_separator.push_back(get());
+        step();
 		name_chain.push_back(expect(TokenType::Identifier));
+		is_method = true;
 	}
 	expect_and_drop(TokenType::Symbol, "(");
 	std::vector<Token*> arg_list;
@@ -262,7 +266,7 @@ AstNode* Parser::funcdecl_named()
 	Token*   end_token;
 	blockbody("end", body, end_token);
 	return ast_manager_.MakeFunctionStat(
-		std::move(name_chain), std::move(arg_list), body, function_keyword, end_token);
+		std::move(name_chain), std::move(arg_list), body, function_keyword, end_token, is_method);
 }
 
 AstNode* Parser::functionargs()

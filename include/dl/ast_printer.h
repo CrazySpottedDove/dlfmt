@@ -208,7 +208,7 @@ private:
 				append('>');
 			}
 			else if constexpr (mode == AstPrintMode::Auto) {
-                append(" > ");
+				append(" > ");
 			}
 			print_expr(expr->gt_expr_.rhs_);
 		}
@@ -219,18 +219,18 @@ private:
 				append(">=");
 			}
 			else if constexpr (mode == AstPrintMode::Auto) {
-                append(" >= ");
+				append(" >= ");
 			}
 			print_expr(expr->ge_expr_.rhs_);
 		}
 		else if (type == AstNodeType::AndExpr) {
 			print_expr(expr->and_expr_.lhs_);
-            append(" and ");
+			append(" and ");
 			print_expr(expr->and_expr_.rhs_);
 		}
 		else if (type == AstNodeType::OrExpr) {
 			print_expr(expr->or_expr_.lhs_);
-            append(" or ");
+			append(" or ");
 			print_expr(expr->or_expr_.rhs_);
 		}
 		else if (type == AstNodeType::NotExpr) {
@@ -264,7 +264,6 @@ private:
 			append(']');
 		}
 		else if (type == AstNodeType::MethodExpr) {
-
 			print_expr(expr->method_expr_.base_);
 			append(':');
 			print_token(expr->method_expr_.method_);
@@ -419,14 +418,14 @@ private:
 							if (entry_type == AstNode::TableEntryType::Field) {
 								auto& field_entry = entry.field_entry_;
 								print_token(field_entry.field_);
-                                append(" = ");
+								append(" = ");
 								print_expr(field_entry.value_);
 							}
 							else if (entry_type == AstNode::TableEntryType::Index) {
 								auto& index_entry = entry.index_entry_;
 								append('[');
 								print_expr(index_entry.index_);
-                                append("] = ");
+								append("] = ");
 								print_expr(index_entry.value_);
 							}
 							else if (entry_type == AstNode::TableEntryType::Value) {
@@ -473,7 +472,7 @@ private:
 				for (size_t i = 0; i < node.expr_list_.size(); ++i) {
 					print_expr(node.expr_list_[i]);
 					if (i < node.expr_list_.size() - 1) {
-                        append(", ");
+						append(", ");
 					}
 				}
 			}
@@ -493,7 +492,7 @@ private:
 			}
 			if (node.expr_list_.size() > 0) {
 				if constexpr (mode != AstPrintMode::Compress) {
-                    append(" = ");
+					append(" = ");
 				}
 				else {
 					append('=');
@@ -541,7 +540,12 @@ private:
 			for (size_t i = 0; i < function_stat.name_chain_.size(); ++i) {
 				print_token(function_stat.name_chain_[i]);
 				if (i < function_stat.name_chain_.size() - 1) {
-					append('.');
+					if (function_stat.is_method_ && i == function_stat.name_chain_.size() - 2) {
+						append(':');
+					}
+					else {
+						append('.');
+					}
 				}
 			}
 			append('(');
@@ -776,22 +780,26 @@ private:
 		default: return FormatStatGroup::None;
 		}
 	}
-	const CommentToken* comment_token() const noexcept { return &(*comment_tokens_)[comment_index_]; }
+	const CommentToken* comment_token() const noexcept
+	{
+		return &(*comment_tokens_)[comment_index_];
+	}
 
-    /**
-     * @brief Simply I don't think indent would exceed 32 in normal use
-     *
-     */
-	void                indent() noexcept
+	/**
+	 * @brief Simply I don't think indent would exceed 32 in normal use
+	 *
+	 */
+	void indent() noexcept
 	{
 		// for (int i = 0; i < indent_; ++i) {
-			// append('\t');
+		// append('\t');
 		// }
-        static constexpr int MAX_INDENT = 32;
-        static constexpr char tabs[MAX_INDENT] = "\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t";
-        append(tabs, indent_);
+		static constexpr int  MAX_INDENT = 32;
+		static constexpr char tabs[MAX_INDENT] =
+			"\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t";
+		append(tabs, indent_);
 	}
-	void space() noexcept{ append(' '); }
+	void space() noexcept { append(' '); }
 	void breakline() noexcept
 	{
 		if constexpr (mode == AstPrintMode::Compress) {

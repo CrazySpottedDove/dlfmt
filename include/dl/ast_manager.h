@@ -27,10 +27,10 @@ public:
 		return ast_arena_.emplace(AstNode::FunctionLiteral{std::move(args), body, token_end}, token_function);
 	}
 	AstNode* MakeFunctionStat(std::vector<Token*>&& name_chain, std::vector<Token*>&& args,
-							  AstNode* body, Token* token_function, Token* token_end)
+							  AstNode* body, Token* token_function, Token* token_end, bool is_method)
 	{
 		return ast_arena_.emplace(
-			AstNode::FunctionStat{std::move(name_chain), std::move(args), body, token_end}, token_function);
+			AstNode::FunctionStat{std::move(name_chain), std::move(args), body, token_end, is_method}, token_function);
 	}
 	AstNode* MakeArgCall(std::vector<AstNode*>&& args, Token* token_open_paren)
 	{
