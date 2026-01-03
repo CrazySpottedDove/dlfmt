@@ -8,6 +8,8 @@ output/
 build-release/
 build-debug/
 build-win/
+build-asan/
+build-relwithdbginfo/
 bin/
 node_modules/
 .dlfmt_cache.json

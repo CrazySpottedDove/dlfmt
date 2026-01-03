@@ -2,13 +2,15 @@ VCPKG = vcpkg
 VCPKG_TOOLCHAIN = $(VCPKG_ROOT)/scripts/buildsystems/vcpkg.cmake
 BUILD_DIR_RELEASE = build-release
 BUILD_DIR_DEBUG = build-debug
+BUILD_DIR_RELWITHDBGINFO = build-relwithdbginfo
+BUILD_DIR_ASAN = build-asan
 # MXE ?= $(HOME)/mxe
 
 # MXE_TOOLCHAIN = $(MXE)/usr/x86_64-w64-mingw32.static-cmake
 
 # BUILD_WIN = build-win
 
-.PHONY: all vcpkg clean debug release help build release-win
+.PHONY: all vcpkg clean debug release help build release-win asan relwithdebinfo bin-extension-dlfmt
 
 all: vcpkg
 	cmake -DCMAKE_TOOLCHAIN_FILE=$(VCPKG_TOOLCHAIN) -B $(BUILD_DIR_RELEASE) -DCMAKE_BUILD_TYPE=Release -DCMAKE_EXPORT_COMPILE_COMMANDS=ON -S .
@@ -24,6 +26,14 @@ build:
 release:
 	cmake -DCMAKE_TOOLCHAIN_FILE=$(VCPKG_TOOLCHAIN) -B $(BUILD_DIR_RELEASE) -DCMAKE_BUILD_TYPE=Release -DCMAKE_EXPORT_COMPILE_COMMANDS=ON -S .
 	cmake --build $(BUILD_DIR_RELEASE)
+
+asan:
+	cmake -DCMAKE_TOOLCHAIN_FILE=$(VCPKG_TOOLCHAIN) -B $(BUILD_DIR_ASAN) -DCMAKE_BUILD_TYPE=Debug -DCMAKE_EXPORT_COMPILE_COMMANDS=ON -S . -DCMAKE_CXX_FLAGS="-fsanitize=address -fno-omit-frame-pointer -g"
+	cmake --build $(BUILD_DIR_ASAN)
+
+relwithdebinfo:
+	cmake -DCMAKE_TOOLCHAIN_FILE=$(VCPKG_TOOLCHAIN) -B $(BUILD_DIR_RELWITHDBGINFO) -DCMAKE_BUILD_TYPE=RelWithDebInfo -DCMAKE_EXPORT_COMPILE_COMMANDS=ON -S .
+	cmake --build $(BUILD_DIR_RELWITHDBGINFO)
 
 debug:
 	cmake -DCMAKE_TOOLCHAIN_FILE=$(VCPKG_TOOLCHAIN) -B $(BUILD_DIR_DEBUG) -DCMAKE_BUILD_TYPE=Debug -DCMAKE_EXPORT_COMPILE_COMMANDS=ON -S .
