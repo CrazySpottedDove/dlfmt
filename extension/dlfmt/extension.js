@@ -1,45 +1,89 @@
 const vscode = require('vscode');
 const cp = require('child_process');
 const fs = require('fs');
+const fsp = fs.promises;
 const path = require('path');
 const os = require('os');
-// ...existing code...
+
+let _concurrencyRunning = 0;
+const _CONCURRENCY_MAX = 2;
+const _concurrencyQueue = [];
+
+function _acquireConcurrency() {
+    if (_concurrencyRunning < _CONCURRENCY_MAX) {
+        _concurrencyRunning++;
+        return Promise.resolve();
+    }
+    return new Promise(resolve => _concurrencyQueue.push(resolve));
+}
+function _releaseConcurrency() {
+    _concurrencyRunning--;
+    if (_concurrencyQueue.length) {
+        const next = _concurrencyQueue.shift();
+        _concurrencyRunning++;
+        next();
+    }
+}
 
 /**
  * @param {vscode.ExtensionContext} context
  */
 function activate(context) {
-    // 输出通道
     const output = vscode.window.createOutputChannel('dlfmt');
 
-    const formatFileCmd = vscode.commands.registerCommand('dlfmt.formatFile', async (uri) => {
+    const formatFileCmd = vscode.commands.registerCommand('dlfmt.formatFileAuto', async (uri) => {
         try {
             const filePath = await resolveFilePath(uri);
             if (!filePath) return;
             await ensureSavedIfActive(filePath);
 
             const exe = await resolveDlfmtExecutable(context, output);
-            await runDlfmt(exe, ['--format-file', filePath], path.dirname(filePath), output);
-            vscode.window.showInformationMessage(`dlfmt: 已格式化文件 ${path.basename(filePath)}`);
+            await runDlfmt(exe, ['--format-file', filePath, '--param', 'auto'], path.dirname(filePath), output);
+            // 为避免频繁打断用户，不在自动命令时弹窗（保留输出）
         } catch (err) {
             reportError(err, output);
         }
     });
 
-    const formatDirCmd = vscode.commands.registerCommand('dlfmt.formatDirectory', async (uri) => {
+    const formatDirCmd = vscode.commands.registerCommand('dlfmt.formatDirectoryAuto', async (uri) => {
         try {
             const dirPath = await resolveDirPath(uri);
             if (!dirPath) return;
 
             const exe = await resolveDlfmtExecutable(context, output);
-            await runDlfmt(exe, ['--format-directory', dirPath], dirPath, output);
-            vscode.window.showInformationMessage(`dlfmt: 已格式化文件夹 ${dirPath}`);
+            await runDlfmt(exe, ['--format-directory', dirPath, '--param', 'auto'], dirPath, output);
         } catch (err) {
             reportError(err, output);
         }
     });
 
-    // 新增：压缩文件命令
+    const formatFileManualCmd = vscode.commands.registerCommand('dlfmt.formatFileManual', async (uri) => {
+        try {
+            const filePath = await resolveFilePath(uri);
+            if (!filePath) return;
+            await ensureSavedIfActive(filePath);
+
+            const exe = await resolveDlfmtExecutable(context, output);
+            await runDlfmt(exe, ['--format-file', filePath, '--param', 'manual'], path.dirname(filePath), output);
+            vscode.window.showInformationMessage(`dlfmt: 手动格式化文件 ${path.basename(filePath)}`);
+        } catch (err) {
+            reportError(err, output);
+        }
+    });
+
+    const formatDirManualCmd = vscode.commands.registerCommand('dlfmt.formatDirectoryManual', async (uri) => {
+        try {
+            const dirPath = await resolveDirPath(uri);
+            if (!dirPath) return;
+
+            const exe = await resolveDlfmtExecutable(context, output);
+            await runDlfmt(exe, ['--format-directory', dirPath, '--param', 'manual'], dirPath, output);
+            vscode.window.showInformationMessage(`dlfmt: 手动格式化文件夹 ${dirPath}`);
+        } catch (err) {
+            reportError(err, output);
+        }
+    });
+
     const compressFileCmd = vscode.commands.registerCommand('dlfmt.compressFile', async (uri) => {
         try {
             const filePath = await resolveFilePath(uri);
@@ -54,7 +98,6 @@ function activate(context) {
         }
     });
 
-    // 新增：压缩目录命令
     const compressDirCmd = vscode.commands.registerCommand('dlfmt.compressDirectory', async (uri) => {
         try {
             const dirPath = await resolveDirPath(uri);
@@ -82,32 +125,67 @@ function activate(context) {
         }
     });
 
-    context.subscriptions.push(output, formatFileCmd, formatDirCmd, compressFileCmd, compressDirCmd, runJsonTaskCmd);
+    context.subscriptions.push(output, formatFileCmd, formatDirCmd, formatFileManualCmd, formatDirManualCmd, compressFileCmd, compressDirCmd, runJsonTaskCmd);
 
-    // 格式化器，复用主输出通道
-    const formatter = vscode.languages.registerDocumentFormattingEditProvider('lua', {
-        async provideDocumentFormattingEdits(document) {
-            const tmpFile = path.join(os.tmpdir(), `dlfmt_${Date.now()}_${Math.random().toString(16).slice(2)}.lua`);
-            fs.writeFileSync(tmpFile, document.getText(), 'utf8');
-            const exe = await resolveDlfmtExecutable(context, output); // 传递output
+    async function formatDocumentEdits(document, mode, context) {
+        const tmpFile = path.join(
+            os.tmpdir(),
+            `dlfmt_${Date.now()}_${Math.random().toString(16).slice(2)}.lua`
+        );
+
+        await fsp.writeFile(tmpFile, document.getText(), 'utf8');
+
+        try {
+            const exe = await resolveDlfmtExecutable(context, output);
+
+            await runDlfmt(
+                exe,
+                ['--format-file', tmpFile, '--param', mode],
+                path.dirname(tmpFile),
+                output
+            );
+
+            const formatted = await fsp.readFile(tmpFile, 'utf8');
+            const original = document.getText();
+
+            if (formatted === original) {
+                return [];
+            }
+
+            const fullRange = new vscode.Range(
+                document.positionAt(0),
+                document.positionAt(original.length)
+            );
+
+            return [
+                vscode.TextEdit.replace(fullRange, formatted)
+            ];
+        } finally {
             try {
-                await runDlfmt(exe, ['--format-file', tmpFile], path.dirname(tmpFile), output); // 传递output
-                const formatted = fs.readFileSync(tmpFile, 'utf8');
-                fs.unlinkSync(tmpFile);
-                const fullRange = new vscode.Range(
-                    document.positionAt(0),
-                    document.positionAt(document.getText().length)
-                );
-                return [vscode.TextEdit.replace(fullRange, formatted)];
-            } catch (err) {
-                if (fs.existsSync(tmpFile)) fs.unlinkSync(tmpFile);
-                output.show(true); // 只在出错时弹出
-                throw err;
+                await fsp.unlink(tmpFile);
+            } catch (e) {
+                // 忽略删除错误
             }
         }
-    });
+    }
 
-    context.subscriptions.push(formatter);
+    context.subscriptions.push(
+        vscode.languages.registerDocumentFormattingEditProvider(
+            { language: 'lua', scheme: 'file' },
+            {
+                async provideDocumentFormattingEdits(document) {
+                    const cfg = vscode.workspace.getConfiguration('dlfmt');
+                    const mode = cfg.get('format.mode', 'auto');
+
+                    return formatDocumentEdits(
+                        document,
+                        mode,
+                        context
+                    );
+                }
+            }
+        )
+    );
 }
 
 /**
@@ -119,19 +197,23 @@ async function resolveDlfmtExecutable(context, output) {
     const cfg = vscode.workspace.getConfiguration('dlfmt');
     const configured = (cfg.get('path') || '').trim();
     if (configured) {
-        if (!fs.existsSync(configured)) {
+        try {
+            await fsp.access(configured);
+        } catch {
             throw new Error(`设置的 dlfmt.path 不存在：${configured}`);
         }
         return configured;
     }
     const bundled = getBundledDlfmtPath(context);
-    if (!fs.existsSync(bundled)) {
+    try {
+        await fsp.access(bundled);
+    } catch {
         throw new Error(`未找到内置 dlfmt 可执行文件：${bundled}`);
     }
-    // 确保 *nix 可执行权限
+    // 确保 *nix 可执行权限（尽量一次设置）
     if (process.platform !== 'win32') {
         try {
-            fs.chmodSync(bundled, 0o755);
+            await fsp.chmod(bundled, 0o755);
         } catch (e) {
             output.appendLine(`[警告] 设置可执行权限失败：${e.message}`);
         }
@@ -141,10 +223,6 @@ async function resolveDlfmtExecutable(context, output) {
 
 /**
  * 返回扩展内置 dlfmt 的平台路径
- * 期望目录结构：
- * - bin/win32/dlfmt.exe
- * - bin/linux/dlfmt
- * - bin/darwin/dlfmt
  */
 function getBundledDlfmtPath(context) {
     const base = context.extensionPath;
@@ -156,40 +234,50 @@ function getBundledDlfmtPath(context) {
         case 'darwin':
             return path.join(base, 'bin', 'darwin', 'dlfmt');
         default:
-            // 默认尝试通用 dlfmt
             return path.join(base, 'bin', process.platform, process.arch, 'dlfmt');
     }
 }
 
 /**
- * 运行 dlfmt
+ * 运行 dlfmt（收集输出并限制并发）
  */
 async function runDlfmt(exePath, args, cwd, output) {
-    output.appendLine(`> "${exePath}" ${args.map(a => (/\s/.test(a) ? `"${a}"` : a)).join(' ')}`);
-    return new Promise((resolve, reject) => {
-        const child = cp.spawn(exePath, args, {
-            cwd,
-            shell: false,
-            windowsHide: true,
-        });
+    await _acquireConcurrency();
+    try {
+        output.appendLine(`> "${exePath}" ${args.map(a => (/\s/.test(a) ? `"${a}"` : a)).join(' ')}`);
+        return await new Promise((resolve, reject) => {
+            const child = cp.spawn(exePath, args, {
+                cwd,
+                shell: false,
+                windowsHide: true,
+            });
 
-        child.stdout.on('data', (d) => output.append(d.toString()));
-        child.stderr.on('data', (d) => output.append(d.toString()));
+            let stdout = '';
+            let stderr = '';
 
-        child.on('error', (err) => {
-            reject(err); // 不主动弹出
+            child.stdout.on('data', (d) => { stdout += d.toString(); });
+            child.stderr.on('data', (d) => { stderr += d.toString(); });
+
+            child.on('error', (err) => {
+                const e = new Error(`${err.message}${stderr ? '\n' + stderr : ''}`);
+                reject(e);
+            });
+            child.on('close', (code) => {
+                if (stdout) output.append(stdout);
+                if (stderr) output.append(stderr);
+                if (code === 0) resolve();
+                else reject(new Error(`dlfmt 退出代码 ${code}${stderr ? '\n' + stderr : ''}`));
+            });
         });
-        child.on('close', (code) => {
-            if (code === 0) resolve();
-            else reject(new Error(`dlfmt 退出代码 ${code}`));
-        });
-    });
+    } finally {
+        _releaseConcurrency();
+    }
 }
 
 async function resolveFilePath(uri) {
     if (uri && uri.fsPath) {
         try {
-            const stat = fs.lstatSync(uri.fsPath);
+            const stat = await fsp.lstat(uri.fsPath);
             if (stat.isFile()) return uri.fsPath;
         } catch { }
     }
@@ -216,7 +304,7 @@ async function ensureSavedIfActive(filePath) {
 async function resolveDirPath(uri) {
     if (uri && uri.fsPath) {
         try {
-            const stat = fs.lstatSync(uri.fsPath);
+            const stat = await fsp.lstat(uri.fsPath);
             if (stat.isDirectory()) return uri.fsPath;
         } catch { }
     }
@@ -245,4 +333,3 @@ module.exports = {
     activate,
     deactivate
 }
-// ...existing code...

@@ -3,10 +3,28 @@
 	"publisher": "CrazySpottedDove",
 	"displayName": "dlfmt",
 	"description": "a blazing fast lua formatter, only support windows & linux",
-	"version": "0.1.2",
+	"version": "0.1.3",
 	"engines": {
 		"vscode": "^1.106.0"
 	},
+	"keywords": [
+		"lua",
+		"formatter",
+		"format",
+		"beautify",
+		"pretty",
+		"code style",
+		"代码格式化",
+		"lua formatter",
+		"lua beautify",
+		"lua pretty",
+		"lua 格式化",
+		"lua 自动格式化",
+		"high performance",
+		"minify",
+		"代码压缩",
+		"高性能"
+	],
 	"categories": [
 		"Other"
 	],
@@ -15,34 +33,50 @@
 	"contributes": {
 		"commands": [
 			{
-				"command": "dlfmt.formatFile",
-				"title": "dlfmt: 格式化文件"
+				"command": "dlfmt.formatFileAuto",
+				"title": "dlfmt: format file with auto style"
 			},
 			{
-				"command": "dlfmt.formatDirectory",
-				"title": "dlfmt: 格式化文件夹"
+				"command": "dlfmt.formatDirectoryAuto",
+				"title": "dlfmt: format directory with auto style"
+			},
+			{
+				"command": "dlfmt.formatFileManual",
+				"title": "dlfmt: format file with manual style"
+			},
+			{
+				"command": "dlfmt.formatDirectoryManual",
+				"title": "dlfmt: format directory with manual style"
 			},
 			{
 				"command": "dlfmt.compressFile",
-				"title": "dlfmt: 压缩文件"
+				"title": "dlfmt: compress file"
 			},
 			{
 				"command": "dlfmt.compressDirectory",
-				"title": "dlfmt: 压缩文件夹"
+				"title": "dlfmt: compress directory"
 			},
 			{
 				"command": "dlfmt.runJsonTask",
-				"title": "dlfmt: 运行 JSON 任务"
+				"title": "dlfmt: run json tasks"
 			}
 		],
 		"menus": {
 			"commandPalette": [
 				{
-					"command": "dlfmt.formatFile",
+					"command": "dlfmt.formatFileAuto",
 					"when": "true"
 				},
 				{
-					"command": "dlfmt.formatDirectory",
+					"command": "dlfmt.formatDirectoryAuto",
+					"when": "true"
+				},
+				{
+					"command": "dlfmt.formatFileManual",
+					"when": "true"
+				},
+				{
+					"command": "dlfmt.formatDirectoryManual",
 					"when": "true"
 				},
 				{
@@ -60,19 +94,29 @@
 			],
 			"explorer/context": [
 				{
-					"command": "dlfmt.formatFile",
+					"command": "dlfmt.formatFileAuto",
 					"group": "navigation",
-					"when": "resourceScheme == file && explorerResourceIsFolder == false"
+					"when": "resourceScheme == file && explorerResourceIsFolder == false && resourceExtname == .lua"
 				},
 				{
-					"command": "dlfmt.formatDirectory",
+					"command": "dlfmt.formatFileManual",
 					"group": "navigation",
-					"when": "resourceScheme == file && explorerResourceIsFolder == true"
+					"when": "resourceScheme == file && explorerResourceIsFolder == false && resourceExtname == .lua"
 				},
 				{
 					"command": "dlfmt.compressFile",
 					"group": "navigation",
-					"when": "resourceScheme == file && explorerResourceIsFolder == false"
+					"when": "resourceScheme == file && explorerResourceIsFolder == false && resourceExtname == .lua"
+				},
+				{
+					"command": "dlfmt.formatDirectoryAuto",
+					"group": "navigation",
+					"when": "resourceScheme == file && explorerResourceIsFolder == true"
+				},
+				{
+					"command": "dlfmt.formatDirectoryManual",
+					"group": "navigation",
+					"when": "resourceScheme == file && explorerResourceIsFolder == true"
 				},
 				{
 					"command": "dlfmt.compressDirectory",
@@ -82,7 +126,7 @@
 				{
 					"command": "dlfmt.runJsonTask",
 					"group": "navigation",
-					"when": "resourceScheme == file"
+					"when": "resourceScheme == file && explorerResourceIsFolder == false && resourceExtname == .json"
 				}
 			]
 		},
@@ -92,7 +136,16 @@
 				"dlfmt.path": {
 					"type": "string",
 					"default": "",
-					"description": "覆盖内置 dlfmt 可执行文件的绝对路径（留空使用内置二进制）"
+					"description": "override dlfmt binary's absolute path, leave it empty to use the bundled one"
+				},
+				"dlfmt.format.mode": {
+					"type": "string",
+					"enum": [
+						"auto",
+						"manual"
+					],
+					"default": "auto",
+					"description": "Default format work mode for dlfmt(auto / manual)"
 				}
 			}
 		},
@@ -107,13 +160,6 @@
 				],
 				"configuration": "./language-configuration.json"
 			}
-		],
-		"formatters": [
-			{
-				"language": "lua",
-				"command": "dlfmt.formatDocument",
-				"displayName": "dlfmt"
-			}
 		]
 	},
 	"files": [
@@ -126,8 +172,11 @@
 		"test": "vscode-test"
 	},
 	"activationEvents": [
-		"onCommand:dlfmt.formatFile",
-		"onCommand:dlfmt.formatDirectory",
+		"onLanguage:lua",
+		"onCommand:dlfmt.formatFileAuto",
+		"onCommand:dlfmt.formatDirectoryAuto",
+		"onCommand:dlfmt.formatFileManual",
+		"onCommand:dlfmt.formatDirectoryManual",
 		"onCommand:dlfmt.compressFile",
 		"onCommand:dlfmt.compressDirectory",
 		"onCommand:dlfmt.runJsonTask"
@@ -144,5 +193,5 @@
 		"type": "git",
 		"url": "https://github.com/CrazySpottedDove/dl"
 	},
-    "license": "MIT"
+	"license": "MIT"
 }
