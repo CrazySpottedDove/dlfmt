@@ -168,12 +168,12 @@ AstNode* Parser::tableexpr()
 
 	while (peek()->source_ != "}") {
 		if (peek()->source_ == "[") {
-			step();
+			Token* left_bracket = get();
 			auto index_expr = expr();
 			expect_and_drop(TokenType::Symbol, "]");
 			expect_and_drop(TokenType::Symbol, "=");
 			auto value_expr = expr();
-			entries.emplace_back(AstNode::TableEntry::IndexEntry{index_expr, value_expr});
+			entries.emplace_back(AstNode::TableEntry::IndexEntry{left_bracket, index_expr, value_expr});
 		}
 		else if (peek()->type_ == TokenType::Identifier && peek(1)->source_ == "=") {
 			auto field = get();

@@ -93,6 +93,7 @@ public:
 	{
 		struct IndexEntry
 		{
+            Token*   left_bracket;
 			AstNode* index_;
 			AstNode* value_;
 		};

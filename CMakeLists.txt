@@ -20,7 +20,7 @@ endif()
 target_include_directories(dl_core PUBLIC ${CMAKE_SOURCE_DIR}/include)
 target_link_libraries(dl_core PUBLIC spdlog::spdlog magic_enum::magic_enum OpenMP::OpenMP_CXX nlohmann_json::nlohmann_json)
 
-add_executable(dlfmt target/dlfmt.cpp)
+add_executable(dlfmt target/dlfmt/main.cpp target/dlfmt/dlfmt_core.cpp)
 target_link_libraries(dlfmt PRIVATE dl_core)
 
 # add_executable(dlc target/dlc.cpp)

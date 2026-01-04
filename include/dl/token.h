@@ -1,6 +1,5 @@
 #pragma once
 #include <bitset>
-#include <string>
 #include <string_view>
 namespace dl {
 enum class TokenType
@@ -15,10 +14,23 @@ enum class TokenType
 	WhiteSpace
 };
 
+enum class CommentTokenType
+{
+	ShortComment,
+	LongComment,
+	EmptyLine
+};
+
 struct CommentToken
 {
-	std::string source_;
-	std::size_t line_;
+	std::string_view source_;
+	std::size_t      line_;
+	CommentTokenType type_;
+    CommentToken(std::string_view source, std::size_t line, CommentTokenType type)
+        : source_(source)
+        , line_(line)
+        , type_(type)
+    {}
 };
 
 struct Token
@@ -60,13 +72,6 @@ inline bool is_hex_digit_char(const char c)
 {
 	return (c >= '0' && c <= '9') || (c >= 'a' && c <= 'f') || (c >= 'A' && c <= 'F');
 }
-
-// inline bool is_symbol_char(const char c)
-// {
-//     const std::unordered_set<char> symbols = {
-//         '+', '-', '*', '/', '^', '%', ',', '{', '}', '[', ']', '(', ')', ';', '#', '.', ':'};
-//     return symbols.find(c) != symbols.end();
-// }
 
 inline bool is_symbol_char(const char c)
 {

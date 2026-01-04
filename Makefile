@@ -4,11 +4,6 @@ BUILD_DIR_RELEASE = build-release
 BUILD_DIR_DEBUG = build-debug
 BUILD_DIR_RELWITHDBGINFO = build-relwithdbginfo
 BUILD_DIR_ASAN = build-asan
-# MXE ?= $(HOME)/mxe
-
-# MXE_TOOLCHAIN = $(MXE)/usr/x86_64-w64-mingw32.static-cmake
-
-# BUILD_WIN = build-win
 
 .PHONY: all vcpkg clean debug release help build release-win asan relwithdebinfo bin-extension-dlfmt
 

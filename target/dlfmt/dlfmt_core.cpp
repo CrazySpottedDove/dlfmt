@@ -1,26 +1,18 @@
+#include "dlfmt_core.h"
 #include "dl/ast_printer.h"
 #include "dl/parser.h"
-#include "dl/timer.h"
 #include "dl/tokenizer.h"
 #include <cstdint>
 #include <cstdio>
 #include <filesystem>
 #include <fstream>
 #include <iostream>
-#include <nlohmann/json.hpp>
-#include <omp.h>
-#include <spdlog/common.h>
-#include <spdlog/sinks/basic_file_sink.h>
-#include <spdlog/sinks/stdout_color_sinks.h>
-#include <spdlog/spdlog.h>
 #include <system_error>
 #include <unordered_map>
 #include <vector>
+static constexpr const char* VERSION = "0.1.2";
 using namespace dl;
-
-const std::string VERSION = "0.1.1";
-
-static void PrintHelp()
+void ShowHelp()
 {
 	printf("Usage: dlfmt [options]\n");
 	printf("Options:\n");
@@ -32,14 +24,15 @@ static void PrintHelp()
 	printf(
 		"  --compress-directory <dir> Compress all files in the specified directory recursively\n");
 	printf("  --json-task <file>     Process tasks defined in the specified JSON file\n");
+	printf("  --param <parameter>    Specify additional parameters for formatting/compressing\n");
 }
 
-static void PrintVersion()
+void ShowVersion()
 {
-	printf("dlfmt version %s\n", VERSION.c_str());
+	printf("dlfmt version %s\n", VERSION);
 }
 
-static void FormatFile(const std::string& format_file)
+void FormatFile(const std::string& format_file, dlfmt_param param)
 {
 
 	std::ifstream file(format_file, std::ios::binary);
@@ -58,23 +51,50 @@ static void FormatFile(const std::string& format_file)
 	}
 	file.close();
 
-	// tokenize
-	Tokenizer<TokenizeMode::Format> tokenizer(std::move(content), format_file);
+	switch (param) {
+	case dlfmt_param::manual_format:
+	{
+		// tokenize
+		Tokenizer<TokenizeMode::FormatManual> tokenizer(std::move(content), format_file);
 
-	// parse
-	Parser parser(tokenizer.getTokens(), format_file);
+#ifndef NDEBUG
+		tokenizer.Print();
+#endif
 
-	// 打开输出
-	std::ofstream out_file(format_file, std::ios::binary | std::ios::trunc);
+		// parse
+		Parser parser(tokenizer.getTokens(), format_file);
 
-	// 写入
-	AstPrinter<AstPrintMode::Auto> printer(out_file, &tokenizer.getCommentTokens());
-	printer.PrintAst(parser.GetAstRoot());
-	out_file.flush();
-	out_file.close();
+		// 打开输出
+		std::ofstream out_file(format_file, std::ios::binary | std::ios::trunc);
+
+		// 写入
+		AstPrinter<AstPrintMode::Manual> printer(out_file, &tokenizer.getCommentTokens());
+		printer.PrintAst(parser.GetAstRoot());
+		out_file.flush();
+		out_file.close();
+		break;
+	}
+	default:
+	{
+		// tokenize
+		Tokenizer<TokenizeMode::FormatAuto> tokenizer(std::move(content), format_file);
+
+		// parse
+		Parser parser(tokenizer.getTokens(), format_file);
+
+		// 打开输出
+		std::ofstream out_file(format_file, std::ios::binary | std::ios::trunc);
+
+		// 写入
+		AstPrinter<AstPrintMode::Auto> printer(out_file, &tokenizer.getCommentTokens());
+		printer.PrintAst(parser.GetAstRoot());
+		out_file.flush();
+		out_file.close();
+	}
+	}
 }
 
-static void FormatDirectory(const std::string& format_directory)
+void FormatDirectory(const std::string& format_directory, dlfmt_param param)
 {
 	if (format_directory.empty()) {
 		SPDLOG_ERROR("No directory specified for formatting.");
@@ -97,7 +117,7 @@ static void FormatDirectory(const std::string& format_directory)
 #pragma omp parallel for
 	for (int i = 0; i < static_cast<int>(files.size()); ++i) {
 		try {
-			FormatFile(files[i]);
+			FormatFile(files[i], param);
 		}
 		catch (const std::exception& e) {
 #pragma omp critical
@@ -114,13 +134,12 @@ static void FormatDirectory(const std::string& format_directory)
 	}
 }
 
-
-static void compressFile(const std::string& format_file)
+void CompressFile(const std::string& compress_file, [[maybe_unused]] dlfmt_param param)
 {
-	std::ifstream file(format_file, std::ios::binary);
+	std::ifstream file(compress_file, std::ios::binary);
 	if (!file) {
-		SPDLOG_ERROR("Failed to open file: {}", format_file.c_str());
-		throw std::runtime_error("Failed to open file: " + format_file);
+		SPDLOG_ERROR("Failed to open file: {}", compress_file.c_str());
+		throw std::runtime_error("Failed to open file: " + compress_file);
 	}
 
 	file.seekg(0, std::ios::end);
@@ -134,13 +153,13 @@ static void compressFile(const std::string& format_file)
 	file.close();
 
 	// tokenize
-	Tokenizer<TokenizeMode::Compress> tokenizer(std::move(content), format_file);
+	Tokenizer<TokenizeMode::Compress> tokenizer(std::move(content), compress_file);
 
 	// parse
-	Parser parser(tokenizer.getTokens(), format_file);
+	Parser parser(tokenizer.getTokens(), compress_file);
 
 	// 打开输出
-	std::ofstream out_file(format_file, std::ios::binary | std::ios::trunc);
+	std::ofstream out_file(compress_file, std::ios::binary | std::ios::trunc);
 
 	// 写入
 	AstPrinter<AstPrintMode::Compress> printer(out_file);
@@ -149,16 +168,16 @@ static void compressFile(const std::string& format_file)
 	out_file.close();
 }
 
-static void compressDirectory(const std::string& format_directory)
+void CompressDirectory(const std::string& compress_directory, [[maybe_unused]] dlfmt_param param)
 {
-	if (format_directory.empty()) {
+	if (compress_directory.empty()) {
 		SPDLOG_ERROR("No directory specified for formatting.");
 		throw std::invalid_argument("No directory specified for formatting.");
 	}
 
 	// 收集所有 .lua 文件
 	std::vector<std::string> files;
-	for (const auto& entry : std::filesystem::recursive_directory_iterator(format_directory)) {
+	for (const auto& entry : std::filesystem::recursive_directory_iterator(compress_directory)) {
 		if (entry.is_regular_file()) {
 			const auto& path = entry.path();
 			if (path.has_extension() && path.extension() == ".lua") {
@@ -172,7 +191,7 @@ static void compressDirectory(const std::string& format_directory)
 #pragma omp parallel for
 	for (int i = 0; i < static_cast<int>(files.size()); ++i) {
 		try {
-			compressFile(files[i]);
+			CompressFile(files[i], param);
 		}
 		catch (const std::exception& e) {
 #pragma omp critical
@@ -204,19 +223,21 @@ static int64_t FileTimeTypeToTimeT(std::filesystem::file_time_type t)
 static bool ShouldProcessFile(const std::string&                                   path,
 							  const std::unordered_map<std::string, file_cache_t>& file_cache)
 {
-	std::string     abspath = std::filesystem::absolute(path).string();
+	// std::string     abspath = std::filesystem::absolute(path).string();
 	std::error_code ec;
-	auto            mtime = std::filesystem::last_write_time(abspath, ec);
+	// auto            mtime = std::filesystem::last_write_time(abspath, ec);
+    const auto mtime = std::filesystem::last_write_time(path, ec);
 	if (ec) return true;
-	int64_t s_mtime = FileTimeTypeToTimeT(mtime);
-	auto    it      = file_cache.find(abspath);
+	const int64_t s_mtime = FileTimeTypeToTimeT(mtime);
+	// const auto    it      = file_cache.find(abspath);
+    const auto    it      = file_cache.find(path);
 	if (it != file_cache.end() && it->second == s_mtime) {
 		return false;
 	}
 	return true;
 }
 
-static void ProcessJsonTask(const std::string& json_file)
+void JsonTask(const std::string& json_file)
 {
 	// 加载任务缓存记录
 	std::unordered_map<std::string, file_cache_t> file_cache;
@@ -239,6 +260,23 @@ static void ProcessJsonTask(const std::string& json_file)
 	task_in >> task_j;
 	task_in.close();
 
+	dlfmt_param param_format   = dlfmt_param::auto_format;
+	dlfmt_param param_compress = dlfmt_param::auto_format;
+	if (task_j.contains("params")) {
+		auto params = task_j["params"];
+		if (params.contains("format")) {
+			std::string fmt_param = params["format"];
+			if (fmt_param == "manual") {
+				param_format = dlfmt_param::manual_format;
+			}
+		}
+
+		if (params.contains("compress")) {
+			std::string cmp_param = params["compress"];
+			// TODO: no param available for compress now
+		}
+	}
+
 	auto tasks = task_j["tasks"];
 
 	std::vector<std::string> format_tasks;
@@ -252,23 +290,28 @@ static void ProcessJsonTask(const std::string& json_file)
 			std::vector<std::filesystem::path> exclude;
 			if (task.contains("exclude")) {
 				for (const auto& ex : task["exclude"])
-					exclude.push_back(std::filesystem::absolute(work_dir / ex.get<std::string>()));
+					// exclude.push_back(std::filesystem::absolute(work_dir / ex.get<std::string>()));
+                exclude.push_back(std::filesystem::path(ex.get<std::string>()));
 			}
 			// 遍历目录，收集所有lua文件
 			for (const auto& entry :
 				 std::filesystem::recursive_directory_iterator(task["directory"])) {
 				if (entry.is_regular_file() && entry.path().extension() == ".lua") {
-					std::string abs_path =
-						std::filesystem::absolute(entry.path().string()).string();
-
+					// std::string abs_path =
+						// std::filesystem::absolute(entry.path().string()).string();
+                    std::string path = entry.path().string();
 					// 文件没有变，不需要加入任务清单
-					if (!ShouldProcessFile(abs_path, file_cache)) {
-						continue;
-					}
+					// if (!ShouldProcessFile(abs_path, file_cache)) {
+						// continue;
+					// }
+                    if(!ShouldProcessFile(entry.path().string(), file_cache)) {
+                        continue;
+                    }
 
 					bool is_excluded = false;
 					for (const auto& ex : exclude) {
-						if (abs_path.compare(0, ex.string().size(), ex.string()) == 0) {
+						// if (abs_path.compare(0, ex.string().size(), ex.string()) == 0) {
+                        if(path.compare(0, ex.string().size(), ex.string()) == 0) {
 							is_excluded = true;
 							break;
 						}
@@ -277,7 +320,8 @@ static void ProcessJsonTask(const std::string& json_file)
 					if (is_excluded) {
 						continue;
 					}
-					compress_tasks.push_back(abs_path);
+					// compress_tasks.push_back(abs_path);
+                    compress_tasks.push_back(path);
 				}
 			}
 		}
@@ -285,7 +329,8 @@ static void ProcessJsonTask(const std::string& json_file)
 			std::vector<std::filesystem::path> exclude;
 			if (task.contains("exclude")) {
 				for (const auto& ex : task["exclude"]) {
-					exclude.push_back(std::filesystem::absolute(work_dir / ex.get<std::string>()));
+					// exclude.push_back(std::filesystem::absolute(work_dir / ex.get<std::string>()));
+                    exclude.push_back(std::filesystem::path(ex.get<std::string>()));
 				}
 			}
 
@@ -293,18 +338,21 @@ static void ProcessJsonTask(const std::string& json_file)
 			for (const auto& entry :
 				 std::filesystem::recursive_directory_iterator(task["directory"])) {
 				if (entry.is_regular_file() && entry.path().extension() == ".lua") {
-					std::string abs_path =
-						std::filesystem::absolute(entry.path().string()).string();
+					// std::string abs_path =
+						// std::filesystem::absolute(entry.path().string()).string();
+                    std::string path = entry.path().string();
 
 					// 文件没有变，不需要加入任务清单
-					if (!ShouldProcessFile(abs_path, file_cache)) {
+					// if (!ShouldProcessFile(abs_path, file_cache)) {
+                    if (!ShouldProcessFile(path, file_cache)) {
 						continue;
 					}
 
 					bool is_excluded = false;
 
 					for (const auto& ex : exclude) {
-						if (abs_path.compare(0, ex.string().size(), ex.string()) == 0) {
+						// if (abs_path.compare(0, ex.string().size(), ex.string()) == 0) {
+                        if (path.compare(0, ex.string().size(), ex.string()) == 0) {
 							is_excluded = true;
 							break;
 						}
@@ -313,7 +361,8 @@ static void ProcessJsonTask(const std::string& json_file)
 					if (is_excluded) {
 						continue;
 					}
-					format_tasks.push_back(abs_path);
+					// format_tasks.push_back(abs_path);
+                    format_tasks.push_back(path);
 				}
 			}
 		}
@@ -326,13 +375,13 @@ static void ProcessJsonTask(const std::string& json_file)
 #pragma omp parallel for
 	for (int i = 0; i < static_cast<int>(format_tasks.size()); ++i) {
 		const auto& abs_path = format_tasks[i];
-		FormatFile(abs_path);
+		FormatFile(abs_path, param_format);
 	}
 
 #pragma omp parallel for
 	for (int i = 0; i < static_cast<int>(compress_tasks.size()); ++i) {
 		const auto& abs_path = compress_tasks[i];
-		compressFile(abs_path);
+		CompressFile(abs_path, param_compress);
 	}
 
 	for (const auto& abs_path : format_tasks) {
@@ -356,137 +405,6 @@ static void ProcessJsonTask(const std::string& json_file)
 		cache_out_j[k] = v;
 	}
 	std::ofstream cache_out(cache_path);
-	cache_out << cache_out_j.dump(1, '\t');
+	cache_out << cache_out_j.dump();
 	cache_out.close();
-}
-
-#define DLFMT_WORK_MODE_FORMAT_FILE 0
-#define DLFMT_WORK_MODE_FORMAT_DIRECTORY 1
-#define DLFMT_WORK_MODE_SHOW_HELP 2
-#define DLFMT_WORK_MODE_SHOW_VERSION 3
-#define DLFMT_WORK_MODE_COMPRESS_FILE 4
-#define DLFMT_WORK_MODE_COMPRESS_DIRECTORY 5
-#define DLFMT_WORK_MODE_JSON_TASK 6
-int main(int argc, char* argv[])
-{
-	// 输出到控制台
-	const auto console = spdlog::stdout_color_mt("console");
-	console->set_pattern("[%^%l %s:%#%$] %v");
-	spdlog::set_default_logger(console);
-	std::string format_file;
-	std::string format_directory;
-	std::string task_file;
-	int         work_mode = DLFMT_WORK_MODE_SHOW_HELP;
-	for (int i = 1; i < argc; ++i) {
-		std::string arg = argv[i];
-		if (arg == "--help") {
-			work_mode = DLFMT_WORK_MODE_SHOW_HELP;
-			break;
-		}
-		else if (arg == "--version") {
-			work_mode = DLFMT_WORK_MODE_SHOW_VERSION;
-			break;
-		}
-		else if (arg == "--format-file") {
-			if (i + 1 < argc) {
-				format_file = argv[i + 1];
-				work_mode   = DLFMT_WORK_MODE_FORMAT_FILE;
-				break;
-			}
-			else {
-				SPDLOG_ERROR("No file specified after --format-file");
-				return 1;
-			}
-		}
-		else if (arg == "--format-directory") {
-			if (i + 1 < argc) {
-				format_directory = argv[i + 1];
-				work_mode        = DLFMT_WORK_MODE_FORMAT_DIRECTORY;
-				break;
-			}
-			else {
-				SPDLOG_ERROR("No directory specified after --format-directory");
-				return 1;
-			}
-		}
-		else if (arg == "--compress-file") {
-			if (i + 1 < argc) {
-				format_file = argv[i + 1];
-				work_mode   = DLFMT_WORK_MODE_COMPRESS_FILE;
-				break;
-			}
-			else {
-				SPDLOG_ERROR("No file specified after --compress-file");
-				return 1;
-			}
-		}
-		else if (arg == "--compress-directory") {
-			if (i + 1 < argc) {
-				format_directory = argv[i + 1];
-				work_mode        = DLFMT_WORK_MODE_COMPRESS_DIRECTORY;
-				break;
-			}
-			else {
-				SPDLOG_ERROR("No directory specified after --compress-directory");
-				return 1;
-			}
-		}
-		else if (arg == "--json-task") {
-			if (i + 1 < argc) {
-				task_file = argv[i + 1];
-				work_mode = DLFMT_WORK_MODE_JSON_TASK;
-				break;
-			}
-			else {
-				SPDLOG_ERROR("No json file specified after --json-task");
-				return 1;
-			}
-		}
-	}
-	if (work_mode == DLFMT_WORK_MODE_SHOW_HELP) {
-		PrintHelp();
-		return 0;
-	}
-	if (work_mode == DLFMT_WORK_MODE_SHOW_VERSION) {
-		PrintVersion();
-		return 0;
-	}
-	Timer timer;
-	timer.start();
-	switch (work_mode) {
-	case DLFMT_WORK_MODE_FORMAT_DIRECTORY:
-	{
-		timer.setLabel(fmt::format("Formatted directory '{}'", format_directory));
-		FormatDirectory(format_directory);
-		break;
-	}
-	case DLFMT_WORK_MODE_FORMAT_FILE:
-	{
-		timer.setLabel(fmt::format("Formatted file '{}'", format_file));
-		FormatFile(format_file);
-		break;
-	}
-	case DLFMT_WORK_MODE_COMPRESS_DIRECTORY:
-	{
-		timer.setLabel(fmt::format("Compressed directory '{}'", format_directory));
-		compressDirectory(format_directory);
-		break;
-	}
-	case DLFMT_WORK_MODE_COMPRESS_FILE:
-	{
-		timer.setLabel(fmt::format("Compressed file '{}'", format_file));
-		compressFile(format_file);
-		break;
-	}
-	case DLFMT_WORK_MODE_JSON_TASK:
-	{
-		timer.setLabel(fmt::format("Processed json task file '{}'", task_file));
-		ProcessJsonTask(task_file);
-		break;
-	}
-	default: SPDLOG_ERROR("Unknown work mode."); return 1;
-	}
-	timer.stop();
-	timer.print();
-	return 0;
 }

@@ -26,12 +26,29 @@ public:
 	void PrintAst(const AstNode* ast) noexcept
 	{
 		print_stat(ast);
-		if constexpr (mode != AstPrintMode::Compress) {
-			// 注意把文件末尾的注释也打印出来
+		if constexpr (mode == AstPrintMode::Auto) {
 			while (comment_index_ < comment_tokens_->size()) {
-				append('\n');
-				indent();
 				append(comment_token()->source_);
+				append('\n');
+				++comment_index_;
+			}
+		}
+		else if constexpr (mode == AstPrintMode::Manual) {
+			while (comment_index_ < comment_tokens_->size()) {
+				auto comment = comment_token();
+				switch (comment->type_) {
+				case CommentTokenType::ShortComment:
+				case CommentTokenType::LongComment:
+				{
+					append(comment->source_);
+					break;
+				}
+				case CommentTokenType::EmptyLine:
+				{
+					break;
+				}
+				}
+				append('\n');
 				++comment_index_;
 			}
 		}
@@ -56,25 +73,43 @@ private:
 		if constexpr (mode == AstPrintMode::Compress) {
 			append(token->source_);
 		}
-		else if constexpr (mode == AstPrintMode::Auto) {
+		else {
 			line_ = token->line_;
 			// 作为一行的开始，应当首先检测头上有没有别的注释，然后再写入 token 内容
 			if (line_start_) {
 				while (comment_index_ < comment_tokens_->size()) {
 					auto comment = comment_token();
+
 					if (line_ > comment->line_) {
-						// 这个注释的行号小于当前行，且还没有消费，所以应该输出这个注释
-						// print 前 indent 已经做好，所以不用重复 indent()
-						// 我们只可能有短注释
-						append(comment->source_);
+						switch (comment->type_) {
+						case CommentTokenType::ShortComment:
+						// {
+						// 	append(comment->source_);
+						// 	append('\n');
+						// 	++comment_index_;
+						// 	indent();
+						// 	break;
+						// }
+						// However I'm too lazy to handle the indent in LongComment case
+						case CommentTokenType::LongComment:
+						{
+							indent();
+							append(comment->source_);
+							break;
+						}
+						case CommentTokenType::EmptyLine:
+						{
+							break;
+						}
+						}
 						append('\n');
 						++comment_index_;
-						indent();
 					}
 					else {
 						break;
 					}
 				}
+				indent();
 				line_start_ = false;
 			}
 			append(token->source_);
@@ -88,7 +123,7 @@ private:
 			if constexpr (mode == AstPrintMode::Compress) {
 				append('+');
 			}
-			else if constexpr (mode == AstPrintMode::Auto) {
+			else {
 				append(" + ");
 			}
 			print_expr(expr->add_expr_.rhs_);
@@ -98,7 +133,7 @@ private:
 			if constexpr (mode == AstPrintMode::Compress) {
 				append('-');
 			}
-			else if constexpr (mode == AstPrintMode::Auto) {
+			else {
 				append(" - ");
 			}
 			print_expr(expr->sub_expr_.rhs_);
@@ -108,7 +143,7 @@ private:
 			if constexpr (mode == AstPrintMode::Compress) {
 				append('*');
 			}
-			else if constexpr (mode == AstPrintMode::Auto) {
+			else {
 				append(" * ");
 			}
 			print_expr(expr->mul_expr_.rhs_);
@@ -119,7 +154,7 @@ private:
 			if constexpr (mode == AstPrintMode::Compress) {
 				append('/');
 			}
-			else if constexpr (mode == AstPrintMode::Auto) {
+			else {
 				append(" / ");
 			}
 			print_expr(expr->div_expr_.rhs_);
@@ -130,7 +165,7 @@ private:
 			if constexpr (mode == AstPrintMode::Compress) {
 				append('%');
 			}
-			else if constexpr (mode == AstPrintMode::Auto) {
+			else {
 				append(" % ");
 			}
 			print_expr(expr->mod_expr_.rhs_);
@@ -141,7 +176,7 @@ private:
 			if constexpr (mode == AstPrintMode::Compress) {
 				append('^');
 			}
-			else if constexpr (mode == AstPrintMode::Auto) {
+			else {
 				append(" ^ ");
 			}
 			print_expr(expr->pow_expr_.rhs_);
@@ -151,7 +186,7 @@ private:
 			if constexpr (mode == AstPrintMode::Compress) {
 				append("..");
 			}
-			else if constexpr (mode == AstPrintMode::Auto) {
+			else {
 				append(" .. ");
 			}
 			print_expr(expr->concat_expr_.rhs_);
@@ -161,7 +196,7 @@ private:
 			if constexpr (mode == AstPrintMode::Compress) {
 				append("==");
 			}
-			else if constexpr (mode == AstPrintMode::Auto) {
+			else {
 				append(" == ");
 			}
 			print_expr(expr->eq_expr_.rhs_);
@@ -172,7 +207,7 @@ private:
 			if constexpr (mode == AstPrintMode::Compress) {
 				append("~=");
 			}
-			else if constexpr (mode == AstPrintMode::Auto) {
+			else {
 				append(" ~= ");
 			}
 			print_expr(expr->neq_expr_.rhs_);
@@ -183,7 +218,7 @@ private:
 			if constexpr (mode == AstPrintMode::Compress) {
 				append('<');
 			}
-			else if constexpr (mode == AstPrintMode::Auto) {
+			else {
 				append(" < ");
 			}
 			print_expr(expr->lt_expr_.rhs_);
@@ -194,7 +229,7 @@ private:
 			if constexpr (mode == AstPrintMode::Compress) {
 				append("<=");
 			}
-			else if constexpr (mode == AstPrintMode::Auto) {
+			else {
 				append(" <= ");
 			}
 			print_expr(expr->le_expr_.rhs_);
@@ -205,7 +240,7 @@ private:
 			if constexpr (mode == AstPrintMode::Compress) {
 				append('>');
 			}
-			else if constexpr (mode == AstPrintMode::Auto) {
+			else {
 				append(" > ");
 			}
 			print_expr(expr->gt_expr_.rhs_);
@@ -216,7 +251,7 @@ private:
 			if constexpr (mode == AstPrintMode::Compress) {
 				append(">=");
 			}
-			else if constexpr (mode == AstPrintMode::Auto) {
+			else {
 				append(" >= ");
 			}
 			print_expr(expr->ge_expr_.rhs_);
@@ -277,9 +312,11 @@ private:
 				for (size_t i = 0; i < arg_list.size(); ++i) {
 					print_expr(arg_list[i]);
 					if (i < arg_list.size() - 1) {
-						append(',');
 						if constexpr (mode != AstPrintMode::Compress) {
-							space();
+							append(", ");
+						}
+						else {
+							append(',');
 						}
 					}
 				}
@@ -304,10 +341,11 @@ private:
 				for (size_t i = 0; i < arg_list.size(); ++i) {
 					print_expr(arg_list[i]);
 					if (i < arg_list.size() - 1) {
-						append(',');
 						if constexpr (mode != AstPrintMode::Compress) {
-							space();
-						}
+							append(", ");
+						}else{
+                            append(',');
+                        }
 					}
 				}
 				append(')');
@@ -324,10 +362,11 @@ private:
 			for (size_t i = 0; i < arg_list.size(); ++i) {
 				print_token(arg_list[i]);
 				if (i < arg_list.size() - 1) {
-					append(',');
 					if constexpr (mode != AstPrintMode::Compress) {
-						space();
-					}
+						append(", ");
+					}else{
+                        append(',');
+                    }
 				}
 			}
 			append(')');
@@ -376,7 +415,7 @@ private:
 						}
 					}
 				}
-				else if constexpr (mode == AstPrintMode::Auto) {
+				else {
 					// 对于纯 value entry 且较短的表，尝试一行输出
 					bool one_line = true;
 					if (node.entry_list_.size() > 10) {
@@ -410,7 +449,6 @@ private:
 						for (size_t i = 0; i < node.entry_list_.size(); ++i) {
 							auto       entry      = node.entry_list_[i];
 							const auto entry_type = entry.type_;
-							indent();
 							if (entry_type == AstNode::TableEntryType::Field) {
 								auto& field_entry = entry.field_entry_;
 								print_token(field_entry.field_);
@@ -419,7 +457,7 @@ private:
 							}
 							else if (entry_type == AstNode::TableEntryType::Index) {
 								auto& index_entry = entry.index_entry_;
-								append('[');
+                                print_token(index_entry.left_bracket);
 								print_expr(index_entry.index_);
 								append("] = ");
 								print_expr(index_entry.value_);
@@ -435,7 +473,6 @@ private:
 							breakline();
 						}
 						dec_indent();
-						indent();
 					}
 				}
 			}
@@ -452,9 +489,8 @@ private:
 			return;
 		}
 
-		if constexpr (mode != AstPrintMode::Compress) {
+		if constexpr (mode == AstPrintMode::Auto) {
 			do_format_stat_group_rules(stat);
-			indent();
 		}
 
 		if (stat->type_ == AstNodeType::BreakStat) {
@@ -482,10 +518,11 @@ private:
 			for (size_t i = 0; i < var_list.size(); ++i) {
 				print_token(var_list[i]);
 				if (i < var_list.size() - 1) {
-					append(',');
 					if constexpr (mode != AstPrintMode::Compress) {
-						space();
-					}
+						append(", ");
+					}else{
+                        append(',');
+                    }
 				}
 			}
 			const auto& expr_list = *node.expr_list_;
@@ -499,10 +536,11 @@ private:
 				for (size_t i = 0; i < expr_list.size(); ++i) {
 					print_expr(expr_list[i]);
 					if (i < expr_list.size() - 1) {
-						append(',');
 						if constexpr (mode != AstPrintMode::Compress) {
-							space();
-						}
+							append(", ");
+						}else{
+                            append(',');
+                        }
 					}
 				}
 			}
@@ -521,10 +559,11 @@ private:
 			for (size_t i = 0; i < arg_list.size(); ++i) {
 				print_token(arg_list[i]);
 				if (i < arg_list.size() - 1) {
-					append(',');
 					if constexpr (mode != AstPrintMode::Compress) {
-						space();
-					}
+						append(", ");
+					}else{
+                        append(',');
+                    }
 				}
 			}
 			append(')');
@@ -554,10 +593,11 @@ private:
 			for (size_t i = 0; i < arg_list.size(); ++i) {
 				print_token(arg_list[i]);
 				if (i < arg_list.size() - 1) {
-					append(',');
 					if constexpr (mode != AstPrintMode::Compress) {
-						space();
-					}
+						append(", ");
+					}else{
+                        append(',');
+                    }
 				}
 			}
 			append(')');
@@ -584,10 +624,11 @@ private:
 			for (size_t i = 0; i < var_list.size(); ++i) {
 				print_token(var_list[i]);
 				if (i < var_list.size() - 1) {
-					append(',');
 					if constexpr (mode != AstPrintMode::Compress) {
-						space();
-					}
+						append(", ");
+					}else{
+                        append(',');
+                    }
 				}
 			}
 			append(" in ");
@@ -595,14 +636,15 @@ private:
 			for (size_t i = 0; i < generator_list.size(); ++i) {
 				print_expr(generator_list[i]);
 				if (i < generator_list.size() - 1) {
-					append(',');
 					if constexpr (mode != AstPrintMode::Compress) {
-						space();
-					}
+                        append(", ");
+					}else{
+                        append(',');
+                    }
 				}
 			}
 			append(" do ");
-            enter_group();
+			enter_group();
 			print_stat(node.body_);
 			exit_group();
 			print_token(node.end_token_);
@@ -615,10 +657,11 @@ private:
 			for (size_t i = 0; i < var_list.size(); ++i) {
 				print_token(var_list[i]);
 				if (i < var_list.size() - 1) {
-					append(',');
 					if constexpr (mode != AstPrintMode::Compress) {
-						space();
-					}
+                        append(", ");
+					}else{
+                        append(',');
+                    }
 				}
 			}
 			if constexpr (mode != AstPrintMode::Compress) {
@@ -631,10 +674,11 @@ private:
 			for (size_t i = 0; i < range_list.size(); ++i) {
 				print_expr(range_list[i]);
 				if (i < range_list.size() - 1) {
-					append(',');
 					if constexpr (mode != AstPrintMode::Compress) {
-						space();
-					}
+						append(", ");
+					}else{
+                        append(',');
+                    }
 				}
 			}
 			append(" do");
@@ -695,10 +739,11 @@ private:
 			for (size_t i = 0; i < lhs.size(); ++i) {
 				print_expr(lhs[i]);
 				if (i < lhs.size() - 1) {
-					append(',');
 					if constexpr (mode != AstPrintMode::Compress) {
-						space();
-					}
+                        append(", ");
+					}else{
+                        append(',');
+                    }
 				}
 			}
 			if constexpr (mode != AstPrintMode::Compress) {
@@ -711,10 +756,11 @@ private:
 			for (size_t i = 0; i < rhs.size(); ++i) {
 				print_expr(rhs[i]);
 				if (i < rhs.size() - 1) {
-					append(',');
 					if constexpr (mode != AstPrintMode::Compress) {
-						space();
-					}
+                        append(", ");
+					}else{
+                        append(',');
+                    }
 				}
 			}
 		}
@@ -731,7 +777,7 @@ private:
 			append("::");
 		}
 		breakline();
-		if constexpr (mode != AstPrintMode::Compress) {
+		if constexpr (mode == AstPrintMode::Auto) {
 			set_format_stat_group(get_format_stat_group(stat));
 		}
 		return;
@@ -792,6 +838,8 @@ private:
 
 	/**
 	 * @brief Simply I don't think indent would exceed 32 in normal use
+	 * @note this function should be called only when line_start_ is true, as every indent is at the
+	 * line start
 	 *
 	 */
 	void indent() noexcept
@@ -802,6 +850,10 @@ private:
 		append(tabs, indent_);
 	}
 	void space() noexcept { append(' '); }
+	/**
+	 * @brief Break line, and set line_start_ to true in non-compress mode
+	 *
+	 */
 	void breakline() noexcept
 	{
 		if constexpr (mode == AstPrintMode::Compress) {
@@ -811,7 +863,7 @@ private:
 			if (comment_index_ < comment_tokens_->size()) {
 				auto comment = comment_token();
 				if (line_ == comment->line_) {
-					// 发现当前行有注释，在行末追加
+					// EmptyLine Shoundn't appear here, so no need to check
 					space();
 					append(comment->source_);
 					++comment_index_;
@@ -860,7 +912,6 @@ private:
 	{
 		if constexpr (mode != AstPrintMode::Compress) {
 			--indent_;
-			indent();
 		}
 	}
 
