@@ -83,9 +83,24 @@ jobs:
       - name: Collect binary and package artifact (Windows)
         if: runner.os == 'Windows'
         run: |
+          $paths = @(
+            'build-win\Release\dlfmt.exe',
+            'build-win\dlfmt.exe',
+            'build-win\bin\Release\dlfmt.exe',
+            'build-win\Debug\dlfmt.exe'
+          )
+          $found = $null
+          foreach ($p in $paths) { if (Test-Path $p) { $found = $p; break } }
+          if (-not $found) {
+            Write-Host "dlfmt.exe not found. Searched paths:"
+            $paths | ForEach-Object { Write-Host "  $_" }
+            Write-Host "Listing build-win tree for debugging:"
+            Get-ChildItem -Path build-win -Recurse -Force | Select-Object FullName,Length | ForEach-Object { Write-Host $_.FullName }
+            exit 1
+          }
           New-Item -ItemType Directory -Path artifacts -Force | Out-Null
-          if (Test-Path build-win\\dlfmt.exe) { Copy-Item build-win\\dlfmt.exe artifacts\\ }
-          Compress-Archive -Path artifacts\\* -DestinationPath dlfmt-${{ matrix.os }}.zip -Force
+          Copy-Item $found artifacts\
+          Compress-Archive -Path artifacts\* -DestinationPath dlfmt-${{ matrix.os }}.zip -Force
         shell: pwsh
 
       - name: Upload build artifact
