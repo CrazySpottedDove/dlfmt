@@ -33,7 +33,7 @@ jobs:
           if [ "${{ matrix.os }}" = "windows-latest" ]; then ./vcpkg/bootstrap-vcpkg.bat; else ./vcpkg/bootstrap-vcpkg.sh; fi
         shell: bash
 
-        - name: Install OpenMP (macOS only)
+      - name: Install OpenMP (macOS only)
         if: runner.os == 'macOS'
         run: brew install libomp
 
