@@ -33,13 +33,26 @@ jobs:
           if [ "${{ matrix.os }}" = "windows-latest" ]; then ./vcpkg/bootstrap-vcpkg.bat; else ./vcpkg/bootstrap-vcpkg.sh; fi
         shell: bash
 
-        - name: Install OpenMP (macOS only)
+      - name: Install OpenMP (macOS only)
         if: runner.os == 'macOS'
         run: brew install libomp
+        shell: bash
 
       - name: Configure CMake
-        if: runner.os != 'Windows'
+        if: runner.os == 'linux'
         run: cmake -DCMAKE_TOOLCHAIN_FILE=${{ github.workspace }}/vcpkg/scripts/buildsystems/vcpkg.cmake -B build-release -S . -DCMAKE_BUILD_TYPE=Release
+        shell: bash
+
+      - name: Configure CMake (macOS)
+        if: runner.os == 'macOS'
+        run: |
+          export CPPFLAGS="-I/opt/homebrew/opt/libomp/include"
+          export LDFLAGS="-L/opt/homebrew/opt/libomp/lib"
+          cmake -DCMAKE_TOOLCHAIN_FILE=${{ github.workspace }}/vcpkg/scripts/buildsystems/vcpkg.cmake \
+            -B build-release -S . -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_C_FLAGS="-Xpreprocessor -fopenmp $CPPFLAGS" \
+            -DCMAKE_CXX_FLAGS="-Xpreprocessor -fopenmp $CPPFLAGS" \
+            -DCMAKE_EXE_LINKER_FLAGS="$LDFLAGS -lomp -Wl,-rpath,/opt/homebrew/opt/libomp/lib"
         shell: bash
 
       - name: Configure CMake (Windows)
@@ -57,123 +70,62 @@ jobs:
         run: cmake --build build-win --config Release
         shell: pwsh
 
-      - name: Collect binary and package artifact (Linux/macOS)
+      - name: Collect binary artifact (Linux/macOS)
         if: runner.os != 'Windows'
         run: |
           mkdir -p artifacts
-          if [ -f build-release/dlfmt ]; then cp build-release/dlfmt artifacts/; fi
-          if [ -f build/dlfmt ]; then cp build/dlfmt artifacts/; fi
-          cd artifacts
-          zip -r ../dlfmt-${{ matrix.os }}.zip .
+          if [ -f build-release/dlfmt ]; then cp build-release/dlfmt artifacts/dlfmt; fi
+          if [ -f build/dlfmt ]; then cp build/dlfmt artifacts/dlfmt; fi
+          chmod +x artifacts/dlfmt || true
         shell: bash
 
-      - name: Collect binary and package artifact (Windows)
+      - name: Collect binary artifact (Windows)
         if: runner.os == 'Windows'
         run: |
+          $paths = @(
+            'build-win\Release\dlfmt.exe',
+            'build-win\dlfmt.exe',
+            'build-win\bin\Release\dlfmt.exe',
+            'build-win\Debug\dlfmt.exe'
+          )
+          $found = $null
+          foreach ($p in $paths) { if (Test-Path $p) { $found = $p; break } }
+          if (-not $found) {
+            Write-Host "dlfmt.exe not found. Searched paths:"
+            $paths | ForEach-Object { Write-Host "  $_" }
+            Write-Host "Listing build-win tree for debugging:"
+            Get-ChildItem -Path build-win -Recurse -Force | Select-Object FullName,Length | ForEach-Object { Write-Host $_.FullName }
+            exit 1
+          }
           New-Item -ItemType Directory -Path artifacts -Force | Out-Null
-          if (Test-Path build-win\\dlfmt.exe) { Copy-Item build-win\\dlfmt.exe artifacts\\ }
-          Compress-Archive -Path artifacts\\* -DestinationPath dlfmt-${{ matrix.os }}.zip -Force
+          Copy-Item $found artifacts\dlfmt.exe
         shell: pwsh
 
       - name: Upload build artifact
         uses: actions/upload-artifact@v4
         with:
           name: dlfmt-${{ matrix.os }}
-          path: dlfmt-${{ matrix.os }}.zip
-
-  package:
-    name: Package VSIX
-    needs: build
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Download linux artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: dlfmt-ubuntu-latest
-          path: artifacts/linux || artifacts/ubuntu
-
-      - name: Download mac artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: dlfmt-macos-latest
-          path: artifacts/macos
-
-      - name: Download windows artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: dlfmt-windows-latest
-          path: artifacts/windows
-
-      - name: Prepare extension bin folders
-        run: |
-          rm -rf extension/dlfmt/bin || true
-          mkdir -p extension/dlfmt/bin/linux
-          mkdir -p extension/dlfmt/bin/macos
-          mkdir -p extension/dlfmt/bin/win32
-          # extract Linux
-          if [ -f artifacts/linux/dlfmt-ubuntu-latest.zip ]; then unzip -o artifacts/linux/dlfmt-ubuntu-latest.zip -d tmp_linux || true; fi
-          if [ -f tmp_linux/dlfmt ]; then cp tmp_linux/dlfmt extension/dlfmt/bin/linux/dlfmt; fi
-          # extract mac
-          if [ -f artifacts/macos/dlfmt-macos-latest.zip ]; then unzip -o artifacts/macos/dlfmt-macos-latest.zip -d tmp_macos || true; fi
-          if [ -f tmp_macos/dlfmt ]; then cp tmp_macos/dlfmt extension/dlfmt/bin/macos/dlfmt; fi
-          # extract windows
-          if [ -f artifacts/windows/dlfmt-windows-latest.zip ]; then powershell -Command "Expand-Archive -Force -Path 'artifacts/windows/dlfmt-windows-latest.zip' -DestinationPath tmp_windows" || true; fi
-          if [ -f tmp_windows/dlfmt.exe ]; then cp tmp_windows/dlfmt.exe extension/dlfmt/bin/win32/dlfmt.exe; fi
-        shell: bash
-
-      - name: Ensure README present
-        run: cp README.md extension/dlfmt/README.md
-        shell: bash
-
-      - name: Setup Node
-        uses: actions/setup-node@v4
-        with:
-          node-version: '18'
-
-      - name: Install vsce
-        run: npm install -g vsce
-        shell: bash
-
-      - name: Package VSIX
-        run: |
-          cd extension/dlfmt
-          vsce package -o ../../dlfmt-${{ github.ref_name || 'dev' }}.vsix
-        shell: bash
-
-      - name: Upload VSIX artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: dlfmt-vsix
-          path: dlfmt-${{ github.ref_name || 'dev' }}.vsix
+          path: artifacts/*
 
   create_release:
     name: Create Release and upload assets
-    needs: [build, package]
+    needs: build
     runs-on: ubuntu-latest
     if: startsWith(github.ref, 'refs/tags/')
     steps:
-      - name: Download VSIX
-        uses: actions/download-artifact@v4
-        with:
-          name: dlfmt-vsix
-          path: release_assets
-
-      - name: Download linux zip
+      - name: Download linux artifact
         uses: actions/download-artifact@v4
         with:
           name: dlfmt-ubuntu-latest
           path: release_assets/linux
 
-      - name: Download mac zip
+      - name: Download mac artifact
         uses: actions/download-artifact@v4
         with:
           name: dlfmt-macos-latest
           path: release_assets/macos
 
-      - name: Download windows zip
+      - name: Download windows artifact
         uses: actions/download-artifact@v4
         with:
           name: dlfmt-windows-latest
@@ -189,34 +141,26 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Upload VSIX to Release
+      - name: Upload linux binary
         uses: actions/upload-release-asset@v1
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: release_assets/dlfmt-${{ github.ref_name }}.vsix
-          asset_name: dlfmt-${{ github.ref_name }}.vsix
+          asset_path: release_assets/linux/dlfmt
+          asset_name: dlfmt-linux
           asset_content_type: application/octet-stream
 
-      - name: Upload linux zip
+      - name: Upload mac binary
         uses: actions/upload-release-asset@v1
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: release_assets/linux/dlfmt-ubuntu-latest.zip
-          asset_name: dlfmt-linux.zip
-          asset_content_type: application/zip
+          asset_path: release_assets/macos/dlfmt
+          asset_name: dlfmt-macos
+          asset_content_type: application/octet-stream
 
-      - name: Upload mac zip
+      - name: Upload windows binary
         uses: actions/upload-release-asset@v1
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: release_assets/macos/dlfmt-macos-latest.zip
-          asset_name: dlfmt-macos.zip
-          asset_content_type: application/zip
-
-      - name: Upload windows zip
-        uses: actions/upload-release-asset@v1
-        with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: release_assets/windows/dlfmt-windows-latest.zip
-          asset_name: dlfmt-windows.zip
-          asset_content_type: application/zip
+          asset_path: release_assets/windows/dlfmt.exe
+          asset_name: dlfmt-windows
+          asset_content_type: application/octet-stream
