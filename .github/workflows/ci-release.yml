@@ -36,10 +36,21 @@ jobs:
       - name: Install OpenMP (macOS only)
         if: runner.os == 'macOS'
         run: brew install libomp
+        shell: bash
 
       - name: Configure CMake
-        if: runner.os != 'Windows'
+        if: runner.os == 'linux'
         run: cmake -DCMAKE_TOOLCHAIN_FILE=${{ github.workspace }}/vcpkg/scripts/buildsystems/vcpkg.cmake -B build-release -S . -DCMAKE_BUILD_TYPE=Release
+        shell: bash
+
+      - name: Configure CMake (macOS)
+        if: runner.os == 'macOS'
+        run: |
+          cmake -DCMAKE_TOOLCHAIN_FILE=${{ github.workspace }}/vcpkg/scripts/buildsystems/vcpkg.cmake \
+            -B build-release -S . -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_C_FLAGS="-Xpreprocessor -fopenmp -I/opt/homebrew/include" \
+            -DCMAKE_CXX_FLAGS="-Xpreprocessor -fopenmp -I/opt/homebrew/include" \
+            -DCMAKE_EXE_LINKER_FLAGS="-L/opt/homebrew/lib -lomp"
         shell: bash
 
       - name: Configure CMake (Windows)
