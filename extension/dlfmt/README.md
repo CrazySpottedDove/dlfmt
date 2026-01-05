@@ -6,9 +6,21 @@ updatedDate: 2025-12-21
 tags: ["lua","formatter","lua formatter","格式化","格式化工具","vscode 插件","高性能工具", "vscode extension", "high performance", "cpp"]
 ---
 
-## Brief
+# dlfmt
 
-*dlfmt* is a high-performance Lua code formatting tool written in cpp, which also provides a certain degree of code compression functionality. If you need to manage Lua code files with hundreds of thousands of characters, choosing dlfmt for formatting will be a good option.
+> **dlfmt** is an extremely fast Lua code formatter written in C++,
+> up to **50–500× faster than stylua** on large Lua files.
+
+dlfmt focuses on **raw formatting performance** and **batch processing**.
+It is designed for large-scale Lua codebases with **hundreds of thousands of lines**.
+
+- 🚀 Written in **C++**
+- ⚡ Optimized for **very large files**
+- 📂 Format or compress **entire directories**
+- 🧩 Supports **JSON-based task pipelines**
+- 🛠 VS Code extension available
+
+## Brief
 
 ## Performance
 
