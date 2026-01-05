@@ -3,7 +3,17 @@ project(dl)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
-add_compile_options(-Wall -Wextra -Wpedantic)
+if(MSVC)
+  # MSVC warnings
+  add_compile_options(/W4)
+  # MSVC 的 OpenMP 标志为 /openmp（如果需要）
+  # add_compile_options(/openmp)
+else()
+  # gcc/clang warnings
+  add_compile_options(-Wall -Wextra -Wpedantic)
+  # gcc/clang 的 OpenMP 标志为 -fopenmp（如果需要）
+  # add_compile_options(-fopenmp)
+endif()
 set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -O3")
 
 find_package(spdlog CONFIG REQUIRED)
