@@ -1,0 +1,166 @@
+name: Build, Package and Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Copy README into extension
+        if: runner.os != 'Windows'
+        run: mkdir -p extension/dlfmt && cp README.md extension/dlfmt/README.md
+        shell: bash
+
+      - name: Copy README into extension (Windows)
+        if: runner.os == 'Windows'
+        run: powershell -Command "mkdir extension\\dlfmt -ErrorAction Ignore; Copy-Item README.md extension\\dlfmt\\README.md -Force"
+        shell: pwsh
+
+      - name: Setup vcpkg
+        run: |
+          git clone --depth=1 https://github.com/microsoft/vcpkg.git vcpkg
+          if [ "${{ matrix.os }}" = "windows-latest" ]; then ./vcpkg/bootstrap-vcpkg.bat; else ./vcpkg/bootstrap-vcpkg.sh; fi
+        shell: bash
+
+      - name: Install OpenMP (macOS only)
+        if: runner.os == 'macOS'
+        run: brew install libomp
+        shell: bash
+
+      - name: Configure CMake
+        if: runner.os == 'linux'
+        run: cmake -DCMAKE_TOOLCHAIN_FILE=${{ github.workspace }}/vcpkg/scripts/buildsystems/vcpkg.cmake -B build-release -S . -DCMAKE_BUILD_TYPE=Release
+        shell: bash
+
+      - name: Configure CMake (macOS)
+        if: runner.os == 'macOS'
+        run: |
+          export CPPFLAGS="-I/opt/homebrew/opt/libomp/include"
+          export LDFLAGS="-L/opt/homebrew/opt/libomp/lib"
+          cmake -DCMAKE_TOOLCHAIN_FILE=${{ github.workspace }}/vcpkg/scripts/buildsystems/vcpkg.cmake \
+            -B build-release -S . -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_C_FLAGS="-Xpreprocessor -fopenmp $CPPFLAGS" \
+            -DCMAKE_CXX_FLAGS="-Xpreprocessor -fopenmp $CPPFLAGS" \
+            -DCMAKE_EXE_LINKER_FLAGS="$LDFLAGS -lomp -Wl,-rpath,/opt/homebrew/opt/libomp/lib"
+        shell: bash
+
+      - name: Configure CMake (Windows)
+        if: runner.os == 'Windows'
+        run: cmake -DCMAKE_TOOLCHAIN_FILE=${{ github.workspace }}\\vcpkg\\scripts\\buildsystems\\vcpkg.cmake -B build-win -S . -DCMAKE_BUILD_TYPE=Release
+        shell: pwsh
+
+      - name: Build (Linux/macOS)
+        if: runner.os != 'Windows'
+        run: cmake --build build-release --config Release -- -j$(nproc)
+        shell: bash
+
+      - name: Build (Windows)
+        if: runner.os == 'Windows'
+        run: cmake --build build-win --config Release
+        shell: pwsh
+
+      - name: Collect binary artifact (Linux/macOS)
+        if: runner.os != 'Windows'
+        run: |
+          mkdir -p artifacts
+          if [ -f build-release/dlfmt ]; then cp build-release/dlfmt artifacts/dlfmt; fi
+          if [ -f build/dlfmt ]; then cp build/dlfmt artifacts/dlfmt; fi
+          chmod +x artifacts/dlfmt || true
+        shell: bash
+
+      - name: Collect binary artifact (Windows)
+        if: runner.os == 'Windows'
+        run: |
+          $paths = @(
+            'build-win\Release\dlfmt.exe',
+            'build-win\dlfmt.exe',
+            'build-win\bin\Release\dlfmt.exe',
+            'build-win\Debug\dlfmt.exe'
+          )
+          $found = $null
+          foreach ($p in $paths) { if (Test-Path $p) { $found = $p; break } }
+          if (-not $found) {
+            Write-Host "dlfmt.exe not found. Searched paths:"
+            $paths | ForEach-Object { Write-Host "  $_" }
+            Write-Host "Listing build-win tree for debugging:"
+            Get-ChildItem -Path build-win -Recurse -Force | Select-Object FullName,Length | ForEach-Object { Write-Host $_.FullName }
+            exit 1
+          }
+          New-Item -ItemType Directory -Path artifacts -Force | Out-Null
+          Copy-Item $found artifacts\dlfmt.exe
+        shell: pwsh
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: dlfmt-${{ matrix.os }}
+          path: artifacts/*
+
+  create_release:
+    name: Create Release and upload assets
+    needs: build
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/')
+    steps:
+      - name: Download linux artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: dlfmt-ubuntu-latest
+          path: release_assets/linux
+
+      - name: Download mac artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: dlfmt-macos-latest
+          path: release_assets/macos
+
+      - name: Download windows artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: dlfmt-windows-latest
+          path: release_assets/windows
+
+      - name: Create GitHub Release
+        id: create_release
+        uses: actions/create-release@v1
+        with:
+          tag_name: ${{ github.ref_name }}
+          release_name: ${{ github.ref_name }}
+          body: Release ${{ github.ref_name }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload linux binary
+        uses: actions/upload-release-asset@v1
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: release_assets/linux/dlfmt
+          asset_name: dlfmt-linux
+          asset_content_type: application/octet-stream
+
+      - name: Upload mac binary
+        uses: actions/upload-release-asset@v1
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: release_assets/macos/dlfmt
+          asset_name: dlfmt-macos
+          asset_content_type: application/octet-stream
+
+      - name: Upload windows binary
+        uses: actions/upload-release-asset@v1
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: release_assets/windows/dlfmt.exe
+          asset_name: dlfmt-windows
+          asset_content_type: application/octet-stream
