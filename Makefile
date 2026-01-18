@@ -37,7 +37,8 @@ debug:
 clean:
 	rm -rf $(BUILD_DIR_RELEASE)
 	rm -rf $(BUILD_DIR_DEBUG)
-# 	rm -rf $(BUILD_WIN)
+	rm -rf $(BUILD_DIR_RELWITHDBGINFO)
+	rm -rf $(BUILD_DIR_ASAN)
 
 help:
 	@echo "Makefile commands:"
@@ -48,10 +49,10 @@ help:
 	@echo "  clean    - Remove the build directory"
 	@echo "  help     - Show this help message"
 
-release-win:
-	cmake -DCMAKE_TOOLCHAIN_FILE="./toolchains/mingw-windows-x64.cmake" -DCMAKE_BUILD_TYPE=Release -S . -B build-win
-	cmake --build build-win --config Release
+# release-win:
+# 	cmake -DCMAKE_TOOLCHAIN_FILE="./toolchains/mingw-windows-x64.cmake" -DCMAKE_BUILD_TYPE=Release -S . -B build-win
+# 	cmake --build build-win --config Release
 
-bin-extension-dlfmt: release release-win
-	cp $(BUILD_DIR_RELEASE)/dlfmt extension/dlfmt/bin/linux/
-	cp build-win/dlfmt.exe extension/dlfmt/bin/win32/
+# bin-extension-dlfmt: release release-win
+# 	cp $(BUILD_DIR_RELEASE)/dlfmt extension/dlfmt/bin/linux/
+# 	cp build-win/dlfmt.exe extension/dlfmt/bin/win32/

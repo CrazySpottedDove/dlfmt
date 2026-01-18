@@ -228,11 +228,11 @@ function getBundledDlfmtPath(context) {
     const base = context.extensionPath;
     switch (process.platform) {
         case 'win32':
-            return path.join(base, 'bin', 'win32', 'dlfmt.exe');
+            return path.join(base, 'bin', 'dlfmt-windows.exe');
         case 'linux':
-            return path.join(base, 'bin', 'linux', 'dlfmt');
+            return path.join(base, 'bin', 'dlfmt-linux');
         case 'darwin':
-            return path.join(base, 'bin', 'darwin', 'dlfmt');
+            return path.join(base, 'bin', 'dlfmt-macos');
         default:
             return path.join(base, 'bin', process.platform, process.arch, 'dlfmt');
     }
