@@ -169,11 +169,12 @@ AstNode* Parser::tableexpr()
 	while (peek()->source_ != "}") {
 		if (peek()->source_ == "[") {
 			Token* left_bracket = get();
-			auto index_expr = expr();
+			auto   index_expr   = expr();
 			expect_and_drop(TokenType::Symbol, "]");
 			expect_and_drop(TokenType::Symbol, "=");
 			auto value_expr = expr();
-			entries.emplace_back(AstNode::TableEntry::IndexEntry{left_bracket, index_expr, value_expr});
+			entries.emplace_back(
+				AstNode::TableEntry::IndexEntry{left_bracket, index_expr, value_expr});
 		}
 		else if (peek()->type_ == TokenType::Identifier && peek(1)->source_ == "=") {
 			auto field = get();
@@ -239,9 +240,9 @@ AstNode* Parser::funcdecl_anonymous()
 
 AstNode* Parser::funcdecl_named()
 {
-	auto function_keyword = get();
-	auto  name_chain_ptr = ast_manager_.MakeTokenVector();
-	auto& name_chain     = *name_chain_ptr;
+	auto  function_keyword = get();
+	auto  name_chain_ptr   = ast_manager_.MakeTokenVector();
+	auto& name_chain       = *name_chain_ptr;
 	name_chain.push_back(expect(TokenType::Identifier));
 	bool is_method = false;
 	while (peek()->source_ == ".") {
@@ -668,8 +669,8 @@ AstNode* Parser::localdecl()
 
 AstNode* Parser::retstat()
 {
-	auto                  return_token = get();
-    auto expr_list_ptr   = ast_manager_.MakeAstNodeVector();
+	auto return_token  = get();
+	auto expr_list_ptr = ast_manager_.MakeAstNodeVector();
 	if (!(is_block_follow() || peek()->source_ == ";")) {
 		exprlist(*expr_list_ptr);
 	}
@@ -750,13 +751,13 @@ AstNode* Parser::statement(bool& is_last)
 
 AstNode* Parser::block()
 {
-    auto statements_ptr = ast_manager_.MakeAstNodeVector();
-    auto& statements = *statements_ptr;
-	bool                  is_last = false;
+	auto  statements_ptr = ast_manager_.MakeAstNodeVector();
+	auto& statements     = *statements_ptr;
+	bool  is_last        = false;
 	while (!is_last && !is_block_follow()) {
 		statements.push_back(statement(is_last));
 		if (peek()->source_ == ";" && peek()->type_ == TokenType::Symbol) {
-            step();
+			step();
 		}
 	}
 	return ast_manager_.MakeStatList(statements_ptr);
@@ -769,5 +770,8 @@ Parser::Parser(std::vector<Token>& tokens, const std::string& file_name)
 	, reached_eof_(false)
 
 {
+	if (tokens_.empty()) {
+		reached_eof_ = true;
+	}
 	ast_root_ = block();
 }
